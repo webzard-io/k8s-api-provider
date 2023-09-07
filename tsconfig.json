@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "outDir": "lib/typings",
+    "lib": ["dom", "esnext", "dom.iterable"],
+    "rootDir": "src",
+    "noEmit": true,
+    "strict": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution":"node"
+  },
+  "include": ["src"],
+  "exclude": ["__tests__", "lib"]
+}

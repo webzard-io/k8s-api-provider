@@ -1,0 +1,85 @@
+{
+  "name": "k8s-api-provider",
+  "version": "0.0.0",
+  "description": "K8s ui data provider",
+  "main": "lib/index.js",
+  "module": "lib/main.js",
+  "typings": "lib/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:webzard-io/k8s-api-provider.git"
+  },
+  "scripts": {
+    "postinstall": "husky install",
+    "start": "tsup --watch",
+    "build": "tsup",
+    "lint": "eslint src --ext .ts --quiet",
+    "typings": "tsc",
+    "test": "jest",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
+  },
+  "maintainers": [
+    "admin0"
+  ],
+  "author": "SmartX.dev",
+  "license": "MIT",
+  "files": [
+    "lib"
+  ],
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "public/*.{js,ts,tsx,yml,json}": [
+      "node -v",
+      "prettier --write"
+    ]
+  },
+  "dependencies": {
+    "@refinedev/core": "^4.5.8",
+    "@refinedev/inferencer": "^4.0.0",
+    "kubernetes-types": "^1.26.0",
+    "ky": "^0.33.3",
+    "lodash": "^4.17.15",
+    "mitt": "^3.0.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.7.1",
+    "@commitlint/config-conventional": "^17.7.0",
+    "@kubernetes/client-node": "^0.18.1",
+    "@types/lodash": "^4.14.149",
+    "@types/node": "^18.16.2",
+    "@typescript-eslint/eslint-plugin": "^6.6.0",
+    "@typescript-eslint/parser": "^6.6.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^8.36.0",
+    "husky": "^8.0.1",
+    "prettier": "^2.5.0",
+    "tsup": "^6.7.0",
+    "typescript": "^4.7.4",
+    "jest": "^29",
+    "ts-jest": "^29"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}
