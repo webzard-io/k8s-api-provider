@@ -13,16 +13,22 @@ export function getObjectConstructor(resource: string, meta?: MetaQuery) {
       };
 }
 
+export interface GlobalStoreInitParams {
+  apiUrl: string;
+  watchWsApiUrl: string;
+  prefix: string;
+}
+
 export class GlobalStore {
-  public apiUrl: string;
+  private apiUrl = '';
+  private watchWsApiUrl = '';
+  prefix = '';
 
-  private store: Map<string, UnstructuredList>;
-  private subscribers: Map<string, ((data: WatchEvent) => void)[]>;
+  private store = new Map<string, UnstructuredList>();
+  private subscribers = new Map<string, ((data: WatchEvent) => void)[]>();
 
-  constructor(apiUrl: string) {
-    this.store = new Map();
-    this.subscribers = new Map();
-    this.apiUrl = apiUrl;
+  constructor(params: GlobalStoreInitParams) {
+    this.init(params);
   }
 
   get<T = UnstructuredList>(resource: string, meta?: MetaQuery): Promise<T> {
@@ -30,6 +36,7 @@ export class GlobalStore {
       if (!this.store.has(resource)) {
         const api = new KubeApi({
           basePath: this.apiUrl,
+          watchWsBasePath: this.watchWsApiUrl,
           objectConstructor: getObjectConstructor(resource, meta),
         });
 
@@ -37,18 +44,18 @@ export class GlobalStore {
 
         api
           .listWatch({
-            onResponse: res => {
+            onResponse: (res) => {
               if (!resolved) {
                 resolve(res as unknown as T);
                 resolved = true;
               }
               this.store.set(resource, res);
             },
-            onEvent: event => {
+            onEvent: (event) => {
               this.notify(resource, event);
             },
           })
-          .catch(e => reject(e));
+          .catch((e) => reject(e));
       } else {
         resolve(this.store.get(resource)! as unknown as T);
       }
@@ -66,7 +73,7 @@ export class GlobalStore {
       const handlers = this.subscribers.get(resource)!;
       this.subscribers.set(
         resource,
-        handlers.filter(h => h !== onEvent)
+        handlers.filter((h) => h !== onEvent)
       );
     };
   }
@@ -78,5 +85,16 @@ export class GlobalStore {
         subscriber(data);
       }
     }
+  }
+  publish (resource: string,data: WatchEvent ) {
+    this.notify(resource, data);
+  }
+  init(params: GlobalStoreInitParams) {
+    const { apiUrl, watchWsApiUrl, prefix } = params;
+    this.store = new Map();
+    this.subscribers = new Map();
+    this.apiUrl = apiUrl;
+    this.watchWsApiUrl = watchWsApiUrl;
+    this.prefix = prefix;
   }
 }

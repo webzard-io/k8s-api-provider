@@ -1,4 +1,4 @@
-import { DataProvider, BaseRecord, GetListResponse } from '@refinedev/core';
+import { DataProvider, BaseRecord, GetListResponse, GetOneResponse } from '@refinedev/core';
 import { KubeSdk, Unstructured } from '../kube-api';
 import { filterData } from '../utils/filter-data';
 import { sortData } from '../utils/sort-data';
@@ -24,7 +24,8 @@ export const dataProvider = (
   Required<DataProvider>,
   'createMany' | 'updateMany' | 'deleteMany' | 'custom'
 > => {
-  const getOne: DataProvider['getOne'] = async ({ resource, id, meta }) => {
+  const getOne = async<TData extends BaseRecord = BaseRecord> (params: Parameters<DataProvider['getOne']>['0']):Promise<GetOneResponse<TData>> => {
+    const { resource, id, meta } = params
     const idParts = id.toString().split('/');
     const [namespace, name] =
       idParts.length === 1 ? [undefined, idParts[0]] : idParts;
@@ -54,7 +55,7 @@ export const dataProvider = (
     ): Promise<GetListResponse<TData>> => {
       const { resource, pagination, filters, sorters, meta } = params;
 
-      let { items } = await globalStore.get(resource, meta);
+      let { items } = await globalStore.get<TData>(resource, meta);
 
       if (filters) {
         items = filterData(filters, items);
@@ -69,10 +70,8 @@ export const dataProvider = (
       }
 
       return {
-        data: items.map(item => ({
-          // wait for fix by refin https://github.com/refinedev/refine/issues/4897
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ...(item as any),
+        data: items.map((item: Unstructured) => ({
+          ...(item),
           id: getId(item),
         })),
         total: items.length,
