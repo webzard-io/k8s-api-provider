@@ -5,7 +5,7 @@ export const paginateData = (
   pagination: Pagination,
   data: Unstructured[]
 ): Unstructured[] => {
-  const { current = 1, pageSize = 10, mode = 'client' } = pagination ?? {};
+  const { current = 1, pageSize = 20, mode = 'client' } = pagination ?? {};
   if (mode === 'server') {
     console.warn(
       'k8s no support server paginateData, auto change to client mode'

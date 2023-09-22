@@ -13,13 +13,16 @@
     "url": "git@github.com:webzard-io/k8s-api-provider.git"
   },
   "scripts": {
-    "postinstall": "husky install",
     "start": "tsup --watch",
     "build": "tsup",
     "lint": "eslint src --ext .ts --quiet",
     "typings": "tsc",
     "test": "jest",
-    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
+    "prepare": "husky install",
+    "postinstall": "husky install",
+    "prepack": "pinst --disable",
+    "postpack": "pinst --enable"
   },
   "maintainers": [
     "admin0"
@@ -58,7 +61,7 @@
     "@typescript-eslint/parser": "^6.6.0",
     "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.36.0",
-    "husky": "^8.0.1",
+    "husky": "^8.0.0",
     "prettier": "^2.5.0",
     "tsup": "^6.7.0",
     "typescript": "^4.7.4",
