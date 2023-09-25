@@ -114,7 +114,7 @@ function createKubeApiURL({
   const parts = [resourceBasePath];
 
   if (namespace) {
-    parts.push(`/namespaces/${namespace}`);
+    parts.push(`namespaces/${namespace}`);
   }
 
   parts.push(resource);
