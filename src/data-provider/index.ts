@@ -12,11 +12,9 @@ export function getId(obj: Unstructured) {
   return `${obj.metadata.namespace}/${obj.metadata.name}`;
 }
 
-function getApiVersion(resourceBasePath: string): string {
-  return resourceBasePath.startsWith('/api/')
-    ? resourceBasePath.replace('/api/', '')
-    : resourceBasePath;
-}
+  function getApiVersion(resourceBasePath: string): string {
+    return resourceBasePath.replace(/^(\/api\/)|(\/apis\/)/, '');
+  }
 
 export const dataProvider = (
   globalStore: GlobalStore

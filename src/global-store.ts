@@ -2,15 +2,15 @@ import { MetaQuery } from '@refinedev/core';
 import { KubeApi, UnstructuredList, WatchEvent } from './kube-api';
 
 export function getObjectConstructor(resource: string, meta?: MetaQuery) {
-  return meta?.resourceBasePath
-    ? {
+  return meta?.resourceBasePath ? 
+    {
         resourceBasePath: meta?.resourceBasePath,
         resource,
-      }
-    : {
+        namespace: meta.namespace
+    } : {
         resourceBasePath: '/api/v1',
         resource: 'namespaces',
-      };
+    };
 }
 
 export interface GlobalStoreInitParams {
@@ -20,7 +20,7 @@ export interface GlobalStoreInitParams {
 }
 
 export class GlobalStore {
-  private apiUrl = '';
+  private _apiUrl = '';
   private watchWsApiUrl = '';
   prefix = '';
 
@@ -30,12 +30,14 @@ export class GlobalStore {
   constructor(params: GlobalStoreInitParams) {
     this.init(params);
   }
-
+  get apiUrl () {
+    return this._apiUrl
+  }
   get<T = UnstructuredList>(resource: string, meta?: MetaQuery): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!this.store.has(resource)) {
         const api = new KubeApi({
-          basePath: this.apiUrl,
+          basePath: this._apiUrl,
           watchWsBasePath: this.watchWsApiUrl,
           objectConstructor: getObjectConstructor(resource, meta),
         });
@@ -93,7 +95,7 @@ export class GlobalStore {
     const { apiUrl, watchWsApiUrl, prefix } = params;
     this.store = new Map();
     this.subscribers = new Map();
-    this.apiUrl = apiUrl;
+    this._apiUrl = apiUrl;
     this.watchWsApiUrl = watchWsApiUrl;
     this.prefix = prefix;
   }
