@@ -1,4 +1,9 @@
-import { DataProvider, BaseRecord, GetListResponse, GetOneResponse } from '@refinedev/core';
+import {
+  DataProvider,
+  BaseRecord,
+  GetListResponse,
+  GetOneResponse,
+} from '@refinedev/core';
 import { KubeSdk, Unstructured } from '../kube-api';
 import { filterData } from '../utils/filter-data';
 import { sortData } from '../utils/sort-data';
@@ -6,15 +11,15 @@ import { paginateData } from '../utils/paginate-data';
 import { GlobalStore } from '../global-store';
 
 export function getId(obj: Unstructured) {
-  if (!obj.metadata.namespace) {
-    return obj.metadata.name || '';
+  if (!obj.metadata?.namespace) {
+    return obj.metadata?.name || '';
   }
-  return `${obj.metadata.namespace}/${obj.metadata.name}`;
+  return `${obj.metadata?.namespace}/${obj.metadata?.name}`;
 }
 
-  function getApiVersion(resourceBasePath: string): string {
-    return resourceBasePath.replace(/^(\/api\/)|(\/apis\/)/, '');
-  }
+function getApiVersion(resourceBasePath: string): string {
+  return resourceBasePath.replace(/^(\/api\/)|(\/apis\/)/, '');
+}
 
 export const dataProvider = (
   globalStore: GlobalStore
@@ -22,8 +27,10 @@ export const dataProvider = (
   Required<DataProvider>,
   'createMany' | 'updateMany' | 'deleteMany' | 'custom'
 > => {
-  const getOne = async<TData extends BaseRecord = BaseRecord> (params: Parameters<DataProvider['getOne']>['0']):Promise<GetOneResponse<TData>> => {
-    const { resource, id, meta } = params
+  const getOne = async <TData extends BaseRecord = BaseRecord>(
+    params: Parameters<DataProvider['getOne']>['0']
+  ): Promise<GetOneResponse<TData>> => {
+    const { resource, id, meta } = params;
     const idParts = id.toString().split('/');
     const [namespace, name] =
       idParts.length === 1 ? [undefined, idParts[0]] : idParts;
@@ -69,7 +76,7 @@ export const dataProvider = (
 
       return {
         data: items.map((item: Unstructured) => ({
-          ...(item),
+          ...item,
           id: getId(item),
         })),
         total: items.length,

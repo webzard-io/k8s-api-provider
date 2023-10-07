@@ -14,7 +14,7 @@ export function informerLog(
   ...args: Parameters<typeof console.log>
 ) {
   // eslint-disable-next-line no-console
-  return console.log(`[DOVETAIL ${name}]`, ...args);
+  return console.log(`[REFINE K8s ${name}]`, ...args);
 }
 
 export type UnstructuredList = {
@@ -244,7 +244,7 @@ export class KubeApi<T extends UnstructuredList> {
 
     return stop;
   }
-  // eslint-disable-next-line require-await, @typescript-eslint/require-await
+
   private async watch(
     url: string,
     response: T,
@@ -360,11 +360,11 @@ export class KubeApi<T extends UnstructuredList> {
   ) {
     const { resourceVersion = '' } = (res as unknown as UnstructuredList)
       .metadata;
-    const protocol = window.location.protocol.includes('https') ? 'wss' : 'ws';
+    const protocol = location.protocol.includes('https') ? 'wss' : 'ws';
     const socket = new WebSocket(
       url.includes('://')
         ? `${url}?resourceVersion=${resourceVersion}&watch=1`
-        : `${protocol}://${window.location.host}/${url}?resourceVersion=${resourceVersion}&watch=1`
+        : `${protocol}://${location.host}/${url}?resourceVersion=${resourceVersion}&watch=1`
     );
     let shouldCloseAfterConnected = false;
     let stopWatch: () => void = () => {
@@ -566,12 +566,6 @@ export class KubeSdk {
     for (const spec of validSpecs) {
       spec.metadata = spec.metadata || {};
       spec.metadata.annotations = spec.metadata.annotations || {};
-      delete spec.metadata.annotations[
-        'kubectl.kubernetes.io/last-applied-configuration'
-      ];
-      spec.metadata.annotations[
-        'kubectl.kubernetes.io/last-applied-configuration'
-      ] = JSON.stringify(spec);
 
       let exist = true;
       try {
@@ -584,24 +578,16 @@ export class KubeSdk {
           throw e;
         }
       }
+      const response = exist
+        ? await this.patch(spec, 'application/apply-patch+yaml')
+        : await this.create(spec);
 
-      try {
-        const response = exist
-          ? await this.patch(spec, 'application/apply-patch+yaml')
-          : await this.create(spec);
-
-        if (exist) {
-          updated.push(response as Unstructured);
-        } else {
-          created.push(response as Unstructured);
-        }
-        changed.push(response as Unstructured);
-      } catch (error) {
-        delete spec.metadata.annotations[
-          'kubectl.kubernetes.io/last-applied-configuration'
-        ];
-        throw error;
+      if (exist) {
+        updated.push(response as Unstructured);
+      } else {
+        created.push(response as Unstructured);
       }
+      changed.push(response as Unstructured);
     }
 
     if (created.length) {

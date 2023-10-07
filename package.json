@@ -38,7 +38,7 @@
     }
   },
   "lint-staged": {
-    "public/*.{js,ts,tsx,yml,json}": [
+    "src/*.{js,ts,tsx,yml,json}": [
       "node -v",
       "prettier --write"
     ]
