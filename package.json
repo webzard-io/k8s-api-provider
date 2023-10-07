@@ -1,6 +1,6 @@
 {
   "name": "k8s-api-provider",
-  "version": "0.0.0",
+  "version": "0.0.2",
   "description": "K8s ui data provider",
   "main": "lib/index.js",
   "module": "lib/index.js",
@@ -62,11 +62,11 @@
     "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.36.0",
     "husky": "^8.0.0",
-    "prettier": "^2.5.0",
-    "tsup": "^6.7.0",
-    "typescript": "^4.7.4",
     "jest": "^29",
-    "ts-jest": "^29"
+    "prettier": "^2.5.0",
+    "ts-jest": "^29",
+    "tsup": "^6.7.0",
+    "typescript": "^4.7.4"
   },
   "browserslist": {
     "production": [
