@@ -2,15 +2,16 @@ import { MetaQuery } from '@refinedev/core';
 import { KubeApi, UnstructuredList, WatchEvent } from './kube-api';
 
 export function getObjectConstructor(resource: string, meta?: MetaQuery) {
-  return meta?.resourceBasePath ? 
-    {
+  return meta?.resourceBasePath
+    ? {
         resourceBasePath: meta?.resourceBasePath,
         resource,
-        namespace: meta.namespace
-    } : {
+        namespace: meta.namespace,
+      }
+    : {
         resourceBasePath: '/api/v1',
         resource: 'namespaces',
-    };
+      };
 }
 
 export interface GlobalStoreInitParams {
@@ -30,8 +31,8 @@ export class GlobalStore {
   constructor(params: GlobalStoreInitParams) {
     this.init(params);
   }
-  get apiUrl () {
-    return this._apiUrl
+  get apiUrl() {
+    return this._apiUrl;
   }
   get<T = UnstructuredList>(resource: string, meta?: MetaQuery): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -46,18 +47,18 @@ export class GlobalStore {
 
         api
           .listWatch({
-            onResponse: (res) => {
+            onResponse: res => {
               if (!resolved) {
                 resolve(res as unknown as T);
                 resolved = true;
               }
               this.store.set(resource, res);
             },
-            onEvent: (event) => {
+            onEvent: event => {
               this.notify(resource, event);
             },
           })
-          .catch((e) => reject(e));
+          .catch(e => reject(e));
       } else {
         resolve(this.store.get(resource)! as unknown as T);
       }
@@ -75,7 +76,7 @@ export class GlobalStore {
       const handlers = this.subscribers.get(resource)!;
       this.subscribers.set(
         resource,
-        handlers.filter((h) => h !== onEvent)
+        handlers.filter(h => h !== onEvent)
       );
     };
   }
@@ -88,7 +89,7 @@ export class GlobalStore {
       }
     }
   }
-  publish (resource: string,data: WatchEvent ) {
+  publish(resource: string, data: WatchEvent) {
     this.notify(resource, data);
   }
   init(params: GlobalStoreInitParams) {

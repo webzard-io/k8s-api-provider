@@ -8,18 +8,24 @@ const eventTypeMap: Record<WatchEvent['type'], LiveEvent['type']> = {
   ADDED: 'created',
   MODIFIED: 'updated',
   DELETED: 'deleted',
-  PING: 'ping'
+  PING: 'ping',
 };
 function getKey<T extends WatchEvent['type']>(value: LiveEvent['type']): T {
   return (Object.keys(eventTypeMap) as Array<keyof typeof eventTypeMap>).find(
-    key => eventTypeMap[key] === value  
+    key => eventTypeMap[key] === value
   ) as T;
 }
-function getSelectedGlobalStore(globalStore:GlobalStore | GlobalStore[], dataProviderName?: string) {
-  return Array.isArray(globalStore) ? globalStore.find(item => item.prefix === dataProviderName) : globalStore
-
+function getSelectedGlobalStore(
+  globalStore: GlobalStore | GlobalStore[],
+  dataProviderName?: string
+) {
+  return Array.isArray(globalStore)
+    ? globalStore.find(item => item.prefix === dataProviderName)
+    : globalStore;
 }
-export const liveProvider = (globalStore: GlobalStore | GlobalStore[]): LiveProvider => ({
+export const liveProvider = (
+  globalStore: GlobalStore | GlobalStore[]
+): LiveProvider => ({
   subscribe: ({ channel, params, callback }) => {
     const { resource } = params ?? {};
     if (!resource) {
@@ -27,11 +33,14 @@ export const liveProvider = (globalStore: GlobalStore | GlobalStore[]): LiveProv
         '[WatchApi]: `resource` is required in `params` for k8s watch and globalStore'
       );
     }
-    const selectedGlobalStore = getSelectedGlobalStore(globalStore, params?.dataProviderName)
+    const selectedGlobalStore = getSelectedGlobalStore(
+      globalStore,
+      params?.dataProviderName
+    );
     if (!selectedGlobalStore) {
       throw new Error(
         '[WatchApi]: `GlobalStore` is required in `params` for k8s live provider, can not find matched `GlobalStore`'
-      ); 
+      );
     }
     const stop = selectedGlobalStore.subscribe(resource, event => {
       const id = getId(event.object);
@@ -54,21 +63,26 @@ export const liveProvider = (globalStore: GlobalStore | GlobalStore[]): LiveProv
     stop?.();
   },
   publish: (event: LiveEvent) => {
-    const selectedGlobalStore = getSelectedGlobalStore(globalStore, event?.payload?.dataProviderName)
+    // TODO:(xingyu) by pass dataProviderName from refine hooks
+    const selectedGlobalStore = getSelectedGlobalStore(
+      globalStore,
+      event?.payload?.dataProviderName
+    );
     if (!selectedGlobalStore) {
       throw new Error(
         '[WatchApi]: `GlobalStore` is required in `params` for k8s live provider, can not find matched `GlobalStore`'
-      ); 
+      );
     }
-    const eventType = getKey(event.type)
-    if (!event.payload?.resource) {
+    const eventType = getKey(event.type);
+    const [, resource] = event.channel.split('/');
+    if (!resource) {
       throw new Error(
         '[WatchApi]: `resource` is required in `params` for k8s watch and globalStore'
-      ); 
+      );
     }
-    selectedGlobalStore.publish(event.payload.resource, {
+    selectedGlobalStore.publish(resource, {
       type: eventType,
-      object: event.payload as Unstructured
+      object: event.payload as Unstructured,
     });
-},
+  },
 });
