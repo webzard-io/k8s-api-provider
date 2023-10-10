@@ -6,3 +6,5 @@ export * from './live-provider';
 export * from './utils';
 export * from './global-store';
 export * from './kube-api';
+
+export type { Relation, ExtendObjectMeta } from './plugins/relation';
