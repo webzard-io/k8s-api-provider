@@ -1,5 +1,6 @@
 import { MetaQuery } from '@refinedev/core';
 import { KubeApi, UnstructuredList, WatchEvent } from './kube-api';
+import { relationPlugin } from './plugins/relation';
 
 export function getObjectConstructor(resource: string, meta?: MetaQuery) {
   return meta?.resourceBasePath
@@ -48,6 +49,7 @@ export class GlobalStore {
         api
           .listWatch({
             onResponse: res => {
+              relationPlugin.processData(res);
               if (!resolved) {
                 resolve(res as unknown as T);
                 resolved = true;
@@ -55,6 +57,7 @@ export class GlobalStore {
               this.store.set(resource, res);
             },
             onEvent: event => {
+              relationPlugin.processItem(event.object);
               this.notify(resource, event);
             },
           })

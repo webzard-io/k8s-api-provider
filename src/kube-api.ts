@@ -8,6 +8,7 @@ import type {
   Status,
 } from 'kubernetes-types/meta/v1';
 import mitt from 'mitt';
+import { relationPlugin } from './plugins/relation';
 
 export function informerLog(
   name: string,
@@ -558,7 +559,9 @@ export class KubeSdk {
   }
 
   public async applyYaml(specs: Unstructured[]) {
-    const validSpecs = specs.filter(s => s && s.kind && s.metadata);
+    const validSpecs = specs
+      .filter(s => s && s.kind && s.metadata)
+      .map(spec => relationPlugin.restoreItem(spec));
     const changed: Unstructured[] = [];
     const created: Unstructured[] = [];
     const updated: Unstructured[] = [];
