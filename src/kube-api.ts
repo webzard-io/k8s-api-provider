@@ -257,14 +257,12 @@ export class KubeApi<T extends UnstructuredList> {
     let { items } = response as unknown as UnstructuredList;
     const stops: Array<() => void> = [];
 
-    const handleEvent = (event: WatchEvent) => {
+    const handleEvent = (event: Readonly<WatchEvent>) => {
       if (event.type === 'PING') {
         return;
       }
 
       informerLog('INFORMER', event);
-
-      onEvent?.(event);
 
       const name = event.object.metadata.name;
       const namespace = event.object.metadata.namespace;
@@ -314,6 +312,7 @@ export class KubeApi<T extends UnstructuredList> {
         ...response,
         items,
       });
+      onEvent?.(event);
     };
 
     stops.push(this.watchBySdk(response, handleEvent));
