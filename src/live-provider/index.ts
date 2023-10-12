@@ -63,10 +63,9 @@ export const liveProvider = (
     stop?.();
   },
   publish: (event: LiveEvent) => {
-    // TODO:(xingyu) by pass dataProviderName from refine hooks
     const selectedGlobalStore = getSelectedGlobalStore(
       globalStore,
-      event?.payload?.dataProviderName
+      event.meta?.dataProviderName
     );
     if (!selectedGlobalStore) {
       throw new Error(
