@@ -1,5 +1,6 @@
 // highly inspired by https://github.com/lensapp/lens/blob/1a29759bff/src/common/k8s-api/kube-api.ts
 import ky, { SearchParamsOption, Options } from 'ky';
+import { get, cloneDeep } from "lodash";
 import type {
   APIResource,
   APIResourceList,
@@ -557,18 +558,27 @@ export class KubeSdk {
     this.basePath = basePath;
   }
 
-  public async applyYaml(specs: Unstructured[], strategy?: string) {
+
+  public async applyYaml(specs: Unstructured[], strategy?: string, replacePaths?: string[][]) {
     const validSpecs = specs
-      .filter(s => s && s.kind && s.metadata)
-      .map(spec => relationPlugin.restoreItem(spec));
+    .filter(s => s && s.kind && s.metadata)
+    .map(spec => relationPlugin.restoreItem(spec));
     const changed: Unstructured[] = [];
     const created: Unstructured[] = [];
     const updated: Unstructured[] = [];
 
-    for (const spec of validSpecs) {
+    for (const index in validSpecs) {
+      const originSpec = validSpecs[index];
+      const spec = cloneDeep(originSpec)
       spec.metadata = spec.metadata || {};
       spec.metadata.annotations = spec.metadata.annotations || {};
-      delete spec.metadata['managedFields']
+
+      if (strategy === "application/apply-patch+yaml") {
+        delete spec.metadata.managedFields;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (spec as any).metadata.resourceVersion;
+      }
+
       let exist = true;
       try {
         await this.read(spec);
@@ -580,16 +590,21 @@ export class KubeSdk {
           throw e;
         }
       }
-      const response = exist
-        ? await this.patch(spec, strategy || 'application/apply-patch+yaml')
-        : await this.create(spec);
 
-      if (exist) {
-        updated.push(response as Unstructured);
-      } else {
-        created.push(response as Unstructured);
-      }
-      changed.push(response as Unstructured);
+        const response = exist
+          ? await this.patch(
+            spec,
+            strategy || "application/merge-patch+json",
+            replacePaths?.[index]
+          )
+          : await this.create(spec);
+
+        if (exist) {
+          updated.push(response as Unstructured);
+        } else {
+          created.push(response as Unstructured);
+        }
+        changed.push(response as Unstructured);
     }
 
     if (created.length) {
@@ -659,19 +674,24 @@ export class KubeSdk {
     return res;
   }
 
-  private async patch(spec: K8sObject, strategy: string) {
+  private async patch(spec: K8sObject, strategy: string, replacePaths?: string[]) {
     const url = await this.specUriPath(spec, 'patch');
+    const json = strategy === "application/json-patch+json" ? (replacePaths || []).map(path => ({
+      op: "replace",
+      path: "/" + path.split(".").join("/"),
+      value: get(spec, path)
+    })) : spec;
     const res = await ky
       .patch(url, {
         headers: {
           'Content-Type': strategy,
         },
         retry: 0,
-        json: spec,
+        json,
         searchParams:
           strategy === 'application/apply-patch+yaml'
             ? {
-                fieldManager: 'd2',
+                fieldManager: 'refine',
                 force: true,
               }
             : undefined,

@@ -132,7 +132,7 @@ export const dataProvider = (
           kind: meta?.kind,
         },
       ]
-      const data = await sdk.applyYaml(params, meta?.strategy);
+      const data = await sdk.applyYaml(params, meta?.strategy, meta?.replacePaths);
 
       return {
         data: data[0] as unknown as TData,
