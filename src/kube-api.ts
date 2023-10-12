@@ -557,7 +557,7 @@ export class KubeSdk {
     this.basePath = basePath;
   }
 
-  public async applyYaml(specs: Unstructured[]) {
+  public async applyYaml(specs: Unstructured[], strategy?: string) {
     const validSpecs = specs
       .filter(s => s && s.kind && s.metadata)
       .map(spec => relationPlugin.restoreItem(spec));
@@ -568,7 +568,7 @@ export class KubeSdk {
     for (const spec of validSpecs) {
       spec.metadata = spec.metadata || {};
       spec.metadata.annotations = spec.metadata.annotations || {};
-
+      delete spec.metadata['managedFields']
       let exist = true;
       try {
         await this.read(spec);
@@ -581,7 +581,7 @@ export class KubeSdk {
         }
       }
       const response = exist
-        ? await this.patch(spec, 'application/apply-patch+yaml')
+        ? await this.patch(spec, strategy || 'application/apply-patch+yaml')
         : await this.create(spec);
 
       if (exist) {

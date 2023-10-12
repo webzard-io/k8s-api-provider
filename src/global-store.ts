@@ -79,7 +79,7 @@ export class GlobalStore {
       const handlers = this.subscribers.get(resource)!;
       this.subscribers.set(
         resource,
-        handlers.filter(h => h !== onEvent)
+        handlers?.filter(h => h !== onEvent)
       );
     };
   }
