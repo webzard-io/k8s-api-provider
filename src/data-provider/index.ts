@@ -86,7 +86,7 @@ export const dataProvider = (
       };
     },
 
-    getMany: async<TData extends BaseRecord = BaseRecord, TVariables={}> (params: {
+    getMany: async<TData extends BaseRecord = BaseRecord, TVariables = unknown> (params: {
       resource: string;
       ids: BaseKey[];
       variables?: TVariables | undefined;
@@ -106,6 +106,7 @@ export const dataProvider = (
     create: async<TData extends BaseRecord = BaseRecord> ({ variables, meta }:Parameters<DataProvider['create']>['0']): Promise<CreateResponse<TData>> => {
       const sdk = new KubeSdk({
         basePath: globalStore.apiUrl,
+        fieldManager: globalStore.fieldManager
       });
 
       const data = await sdk.applyYaml([
@@ -124,6 +125,7 @@ export const dataProvider = (
     update: async<TData extends BaseRecord = BaseRecord> ({ variables, meta }:Parameters<DataProvider['update']>['0']): Promise<UpdateResponse<TData>> => {
       const sdk = new KubeSdk({
         basePath: globalStore.apiUrl,
+        fieldManager: globalStore.fieldManager
       });
       const params = [
         {
@@ -144,6 +146,7 @@ export const dataProvider = (
     deleteOne:  async<TData extends BaseRecord = BaseRecord> ({ resource, id, meta, ...rest }:Parameters<DataProvider['deleteOne']>['0']): Promise<DeleteOneResponse<TData>> => {
       const sdk = new KubeSdk({
         basePath: globalStore.apiUrl,
+        fieldManager: globalStore.fieldManager
       });
 
       const { data: current } = await getOne({ id, resource, meta, ...rest });

@@ -530,6 +530,7 @@ export class KubeApi<T extends UnstructuredList> {
 
 type KubeSdkOptions = {
   basePath: string;
+  fieldManager?: string
 };
 
 type KubernetesApiAction =
@@ -550,12 +551,14 @@ type OperationOptions = {
 export class KubeSdk {
   private basePath: string;
   private defaultNamespace = 'default';
+  private fieldManager?: string
 
   constructor(protected options: KubeSdkOptions) {
-    const { basePath } = options;
+    const { basePath, fieldManager } = options;
 
     this.options = options;
     this.basePath = basePath;
+    this.fieldManager = fieldManager
   }
 
 
@@ -594,7 +597,7 @@ export class KubeSdk {
         const response = exist
           ? await this.patch(
             spec,
-            strategy || "application/merge-patch+json",
+            strategy || "application/apply-patch+yaml",
             replacePaths?.[index]
           )
           : await this.create(spec);
@@ -691,7 +694,7 @@ export class KubeSdk {
         searchParams:
           strategy === 'application/apply-patch+yaml'
             ? {
-                fieldManager: 'refine',
+                fieldManager: this.fieldManager || 'refine',
                 force: true,
               }
             : undefined,

@@ -17,14 +17,16 @@ export function getObjectConstructor(resource: string, meta?: MetaQuery) {
 
 export interface GlobalStoreInitParams {
   apiUrl: string;
-  watchWsApiUrl: string;
-  prefix: string;
+  watchWsApiUrl?: string;
+  prefix?: string;
+  fieldManager?: string;
 }
 
 export class GlobalStore {
   private _apiUrl = '';
-  private watchWsApiUrl = '';
-  prefix = '';
+  private watchWsApiUrl?: string;
+  prefix?: string;
+  fieldManager?: string
 
   private store = new Map<string, UnstructuredList>();
   private subscribers = new Map<string, ((data: WatchEvent) => void)[]>();
@@ -96,11 +98,12 @@ export class GlobalStore {
     this.notify(resource, data);
   }
   init(params: GlobalStoreInitParams) {
-    const { apiUrl, watchWsApiUrl, prefix } = params;
+    const { apiUrl, watchWsApiUrl, prefix, fieldManager } = params;
     this.store = new Map();
     this.subscribers = new Map();
     this._apiUrl = apiUrl;
     this.watchWsApiUrl = watchWsApiUrl;
     this.prefix = prefix;
+    this.fieldManager = fieldManager
   }
 }
