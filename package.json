@@ -1,6 +1,6 @@
 {
   "name": "k8s-api-provider",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "K8s ui data provider",
   "main": "lib/index.js",
   "module": "lib/index.js",
@@ -53,6 +53,7 @@
     "@commitlint/cli": "^17.7.1",
     "@commitlint/config-conventional": "^17.7.0",
     "@kubernetes/client-node": "^0.18.1",
+    "@refinedev/core": "^4.44.4",
     "@types/lodash": "^4.14.149",
     "@types/node": "^18.16.2",
     "@typescript-eslint/eslint-plugin": "^6.6.0",
@@ -64,8 +65,7 @@
     "prettier": "^2.5.0",
     "ts-jest": "^29",
     "tsup": "^6.7.0",
-    "typescript": "^4.7.4",
-    "@refinedev/core": "^4.44.4"
+    "typescript": "^4.7.4"
   },
   "peerDependencies": {
     "@refinedev/core": "^4.44.4"
