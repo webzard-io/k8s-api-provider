@@ -1,5 +1,6 @@
-import { filterData } from '../../src/utils/filter-data';
+import { filterData, evaluateFilter } from '../../src/utils/filter-data';
 import { CrudFilters } from '@refinedev/core';
+import { Unstructured } from '../../lib';
 
 describe('filterData function', () => {
   const unstructuredData = [
@@ -93,3 +94,139 @@ describe('filterData function', () => {
     expect(filteredData).toEqual(unstructuredData);
   });
 });
+
+describe('evaluateFilter function', () => {
+  const mockItem = {
+    apiVersion: 'v1',
+    kind: 'Pod',
+    metadata: {
+      name: 'test-pod',
+      namespace: 'default',
+    },
+    spec: {
+      total: 10,
+      labels: ['label-1', 'label-2'],
+      description: null,
+    }
+  } as Unstructured;
+
+  test('handles "eq" operator', () => {
+    const result = evaluateFilter(mockItem, 'kind', 'eq', 'Pod');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "ne" operator', () => {
+    const result = evaluateFilter(mockItem, 'kind', 'ne', 'Service');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "lt" operator', () => {
+    const result = evaluateFilter(mockItem, 'spec.total', 'lt', 11);
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "gt" operator', () => {
+    const result = evaluateFilter(mockItem, 'spec.total', 'gt', 9);
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "lte" operator', () => {
+    const result = evaluateFilter(mockItem, 'spec.total', 'lte', 10);
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "gte" operator', () => {
+    const result = evaluateFilter(mockItem, 'spec.total', 'gte', 10);
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "in" operator', () => {
+    expect(evaluateFilter(mockItem, 'spec.labels', 'in', ['label-1', 'label-2'])).toBeTruthy();
+    expect(evaluateFilter(mockItem, 'spec.total', 'in', ['label-1', 'label-2'])).toBeFalsy();
+  });
+
+  test('handles "nin" operator', () => {
+    expect(evaluateFilter(mockItem, 'spec.labels', 'nin', ['label-3', 'label-4'])).toBeTruthy();
+    expect(evaluateFilter(mockItem, 'spec.total', 'nin', ['label-3', 'label-4'])).toBeFalsy();
+  });
+
+  test('handles "contains" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'contains', 'test');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "ncontains" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'ncontains', 'prod');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "containss" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'containss', 'TEST');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "ncontainss" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'ncontainss', 'PROD');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "between" operator', () => {
+    const result = evaluateFilter(mockItem, 'spec.total', 'between', [1, 11]);
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "nbetween" operator', () => {
+    const result = evaluateFilter(mockItem, 'spec.total', 'nbetween', [2, 9]);
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "null" operator', () => {
+    const result = evaluateFilter(mockItem, 'spec.description', 'null', null);
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "nnull" operator', () => {
+    const result = evaluateFilter(mockItem, 'spec.total', 'nnull', null);
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "startswith" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'startswith', 'test');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "nstartswith" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'nstartswith', 'prod');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "startswiths" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'startswiths', 'TEST');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "nstartswiths" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'nstartswiths', 'PROD');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "endswith" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'endswith', 'pod');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "nendswith" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'nendswith', 'service');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "endswiths" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'endswiths', 'POD');
+    expect(result).toBeTruthy();
+  });
+
+  test('handles "nendswiths" operator', () => {
+    const result = evaluateFilter(mockItem, 'metadata.name', 'nendswiths', 'SERVICE');
+    expect(result).toBeTruthy();
+  });
+})
