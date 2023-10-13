@@ -107,6 +107,7 @@ describe('evaluateFilter function', () => {
       total: 10,
       labels: ['label-1', 'label-2'],
       description: null,
+      type: 'type-1'
     }
   } as Unstructured;
 
@@ -143,11 +144,19 @@ describe('evaluateFilter function', () => {
   test('handles "in" operator', () => {
     expect(evaluateFilter(mockItem, 'spec.labels', 'in', ['label-1', 'label-2'])).toBeTruthy();
     expect(evaluateFilter(mockItem, 'spec.total', 'in', ['label-1', 'label-2'])).toBeFalsy();
+    expect(evaluateFilter(mockItem, 'spec.total', 'in', [10, 20])).toBeTruthy();
+    expect(evaluateFilter(mockItem, 'spec.type', 'in', ['type-1', 'type-2'])).toBeTruthy();
+    expect(evaluateFilter(mockItem, 'spec.type', 'in', ['type-3', 'type-4'])).toBeFalsy();
+    expect(evaluateFilter(mockItem, 'spec.type', 'in', 'type-1')).toBeFalsy();
   });
 
   test('handles "nin" operator', () => {
     expect(evaluateFilter(mockItem, 'spec.labels', 'nin', ['label-3', 'label-4'])).toBeTruthy();
-    expect(evaluateFilter(mockItem, 'spec.total', 'nin', ['label-3', 'label-4'])).toBeFalsy();
+    expect(evaluateFilter(mockItem, 'spec.total', 'nin', ['label-3', 'label-4'])).toBeTruthy();
+    expect(evaluateFilter(mockItem, 'spec.total', 'nin', [10, 20])).toBeFalsy();
+    expect(evaluateFilter(mockItem, 'spec.type', 'nin', ['type-1', 'type-2'])).toBeFalsy();
+    expect(evaluateFilter(mockItem, 'spec.type', 'nin', ['type-3', 'type-4'])).toBeTruthy();
+    expect(evaluateFilter(mockItem, 'spec.type', 'in', 'type-1')).toBeFalsy();
   });
 
   test('handles "contains" operator', () => {

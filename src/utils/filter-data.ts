@@ -59,16 +59,26 @@ export function evaluateFilter(
     case 'gte':
       return fieldValue >= value;
     case 'in': {
-      if (!Array.isArray(fieldValue) || !Array.isArray(value)) {
+      if (!Array.isArray(value)) {
         return false;
       }
-      return value.some(item => _.includes(fieldValue, item));
+      return value.some(item => {
+        if (Array.isArray(fieldValue)) {
+          return _.includes(fieldValue, item);
+        }
+        return item === fieldValue
+      });
     }
     case 'nin': {
-      if (!Array.isArray(fieldValue) || !Array.isArray(value)) {
+      if (!Array.isArray(value)) {
         return false;
       }
-      return value.every(item => !_.includes(fieldValue, item));
+      return value.every(item => {
+        if (Array.isArray(fieldValue)) {
+          return !_.includes(fieldValue, item);
+        }
+        return item !== fieldValue
+      });
     }
     case 'contains':
       return _.includes(fieldValue, value);
