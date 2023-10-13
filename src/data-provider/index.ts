@@ -3,6 +3,12 @@ import {
   BaseRecord,
   GetListResponse,
   GetOneResponse,
+  GetManyResponse,
+  BaseKey,
+  CreateResponse,
+  MetaQuery,
+  UpdateResponse,
+  DeleteOneResponse
 } from '@refinedev/core';
 import { KubeSdk, Unstructured } from '../kube-api';
 import { filterData } from '../utils/filter-data';
@@ -42,15 +48,12 @@ export const dataProvider = (
     );
 
     return {
-      data: (data
-        ? {
-            ...data,
-            id: getId(data),
-            kind: kind.replace(/List$/g, ''),
-            apiVersion: apiVersion,
-          }
-        : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          null) as any,
+      data: {
+        ...data,
+        id: data ? getId(data) : '',
+        kind: kind.replace(/List$/g, ''),
+        apiVersion: apiVersion,
+      } as unknown as TData,
     };
   };
 
@@ -83,20 +86,27 @@ export const dataProvider = (
       };
     },
 
-    getMany: async ({ ids, ...rest }) => {
+    getMany: async<TData extends BaseRecord = BaseRecord, TVariables = unknown> (params: {
+      resource: string;
+      ids: BaseKey[];
+      variables?: TVariables | undefined;
+      meta?: MetaQuery | undefined;
+      metaData?: MetaQuery | undefined;
+    }): Promise<GetManyResponse<TData>> => {
+      const { ids, ...rest } = params
       const data = await Promise.all(
         ids.map(id => getOne({ id, ...rest }).then(v => v.data))
       );
 
       return {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data: data as any,
+        data: data  as unknown as TData[],
       };
     },
 
-    create: async ({ variables, meta }) => {
+    create: async<TData extends BaseRecord = BaseRecord> ({ variables, meta }:Parameters<DataProvider['create']>['0']): Promise<CreateResponse<TData>> => {
       const sdk = new KubeSdk({
         basePath: globalStore.apiUrl,
+        fieldManager: globalStore.fieldManager
       });
 
       const data = await sdk.applyYaml([
@@ -108,35 +118,35 @@ export const dataProvider = (
       ]);
 
       return {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data: data[0] as any,
+        data: data[0] as unknown as TData,
       };
     },
 
-    update: async ({ variables, meta }) => {
+    update: async<TData extends BaseRecord = BaseRecord> ({ variables, meta }:Parameters<DataProvider['update']>['0']): Promise<UpdateResponse<TData>> => {
       const sdk = new KubeSdk({
         basePath: globalStore.apiUrl,
+        fieldManager: globalStore.fieldManager
       });
-
-      const data = await sdk.applyYaml([
+      const params = [
         {
           ...(variables as unknown as Unstructured),
           apiVersion: getApiVersion(meta?.resourceBasePath),
           kind: meta?.kind,
         },
-      ]);
+      ]
+      const data = await sdk.applyYaml(params, meta?.strategy, meta?.replacePaths);
 
       return {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data: data[0] as any,
+        data: data[0] as unknown as TData,
       };
     },
 
     getOne,
 
-    deleteOne: async ({ resource, id, meta, ...rest }) => {
+    deleteOne:  async<TData extends BaseRecord = BaseRecord> ({ resource, id, meta, ...rest }:Parameters<DataProvider['deleteOne']>['0']): Promise<DeleteOneResponse<TData>> => {
       const sdk = new KubeSdk({
         basePath: globalStore.apiUrl,
+        fieldManager: globalStore.fieldManager
       });
 
       const { data: current } = await getOne({ id, resource, meta, ...rest });
@@ -144,8 +154,7 @@ export const dataProvider = (
       const data = await sdk.deleteYaml([current as Unstructured]);
 
       return {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data: data[0] as any,
+        data: data[0] as unknown as TData,
       };
     },
 
