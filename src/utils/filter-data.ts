@@ -36,10 +36,10 @@ export const filterData = (
   });
 };
 
-function evaluateFilter(
+export function evaluateFilter(
   item: Unstructured,
   field: string,
-  operator: CrudOperators,
+  operator: Exclude<CrudOperators, 'or' | 'and'>,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any
 ): boolean {
@@ -58,18 +58,26 @@ function evaluateFilter(
       return fieldValue <= value;
     case 'gte':
       return fieldValue >= value;
-    case 'in':
-      return value.includes(fieldValue);
-    case 'nin':
-      return !value.includes(fieldValue);
+    case 'in': {
+      if (!Array.isArray(fieldValue) || !Array.isArray(value)) {
+        return false;
+      }
+      return value.some(item => _.includes(fieldValue, item));
+    }
+    case 'nin': {
+      if (!Array.isArray(fieldValue) || !Array.isArray(value)) {
+        return false;
+      }
+      return value.every(item => !_.includes(fieldValue, item));
+    }
     case 'contains':
-      return fieldValue.includes(value);
+      return _.includes(fieldValue, value);
     case 'ncontains':
-      return !fieldValue.includes(value);
+      return !_.includes(fieldValue, value);
     case 'containss':
-      return fieldValue.toLowerCase().includes(value.toLowerCase());
+      return _.includes(fieldValue.toLowerCase(), value.toLowerCase());
     case 'ncontainss':
-      return !fieldValue.toLowerCase().includes(value.toLowerCase());
+      return !_.includes(fieldValue.toLowerCase(), value.toLowerCase());
     case 'between':
       return value[0] <= fieldValue && fieldValue <= value[1];
     case 'nbetween':
@@ -94,7 +102,5 @@ function evaluateFilter(
       return fieldValue.toLowerCase().endsWith(value.toLowerCase());
     case 'nendswiths':
       return !fieldValue.toLowerCase().endsWith(value.toLowerCase());
-    default:
-      return true;
   }
 }
