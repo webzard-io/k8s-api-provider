@@ -1,6 +1,6 @@
 import { MetaQuery } from '@refinedev/core';
 import { KubeApi, UnstructuredList, WatchEvent } from './kube-api';
-import { relationPlugin } from './plugins/relation';
+import { formatterPlugin } from './plugins/formater';
 
 export function getObjectConstructor(resource: string, meta?: MetaQuery) {
   return meta?.resourceBasePath
@@ -26,7 +26,7 @@ export class GlobalStore {
   private _apiUrl = '';
   private watchWsApiUrl?: string;
   prefix?: string;
-  fieldManager?: string
+  fieldManager?: string;
 
   private store = new Map<string, UnstructuredList>();
   private subscribers = new Map<string, ((data: WatchEvent) => void)[]>();
@@ -51,7 +51,7 @@ export class GlobalStore {
         api
           .listWatch({
             onResponse: res => {
-              relationPlugin.processData(res);
+              formatterPlugin.processData(res);
               if (!resolved) {
                 resolve(res as unknown as T);
                 resolved = true;
@@ -59,7 +59,7 @@ export class GlobalStore {
               this.store.set(resource, res);
             },
             onEvent: event => {
-              relationPlugin.processItem(event.object);
+              formatterPlugin.processItem(event.object);
               this.notify(resource, event);
             },
           })
@@ -104,6 +104,6 @@ export class GlobalStore {
     this._apiUrl = apiUrl;
     this.watchWsApiUrl = watchWsApiUrl;
     this.prefix = prefix;
-    this.fieldManager = fieldManager
+    this.fieldManager = fieldManager;
   }
 }

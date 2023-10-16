@@ -16,13 +16,6 @@ import { sortData } from '../utils/sort-data';
 import { paginateData } from '../utils/paginate-data';
 import { GlobalStore } from '../global-store';
 
-export function getId(obj: Unstructured) {
-  if (!obj.metadata?.namespace) {
-    return obj.metadata?.name || '';
-  }
-  return `${obj.metadata?.namespace}/${obj.metadata?.name}`;
-}
-
 function getApiVersion(resourceBasePath: string): string {
   return resourceBasePath.replace(/^(\/api\/)|(\/apis\/)/, '');
 }
@@ -50,7 +43,6 @@ export const dataProvider = (
     return {
       data: {
         ...data,
-        id: data ? getId(data) : '',
         kind: kind.replace(/List$/g, ''),
         apiVersion: apiVersion,
       } as unknown as TData,
@@ -78,10 +70,7 @@ export const dataProvider = (
       }
 
       return {
-        data: items.map((item: Unstructured) => ({
-          ...item,
-          id: getId(item),
-        })),
+        data: items,
         total: items.length,
       };
     },

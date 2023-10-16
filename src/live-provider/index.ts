@@ -1,6 +1,6 @@
 import { LiveEvent, LiveProvider } from '@refinedev/core';
 import { StopWatchHandler, WatchEvent, Unstructured } from '../kube-api';
-import { getId } from '../data-provider';
+import { getId } from '../plugins/id';
 
 import { GlobalStore } from '../global-store';
 

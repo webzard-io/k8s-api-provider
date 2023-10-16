@@ -6,8 +6,10 @@ import {
   StatefulSet,
 } from 'kubernetes-types/apps/v1';
 import { Job } from 'kubernetes-types/batch/v1';
-import { Unstructured, UnstructuredList } from '../kube-api';
+import { Unstructured } from '../kube-api';
 import { Service } from 'kubernetes-types/core/v1';
+import { omit } from 'lodash';
+import type { BasePlugin } from './index.d';
 
 export type Relation = {
   kind: string;
@@ -24,33 +26,17 @@ export type ExtendObjectMeta = ObjectMeta & {
   relations?: Relation[];
 };
 
-class RelationPlugin {
-  processData(res: UnstructuredList): UnstructuredList {
-    const { kind, apiVersion } = res;
-    res.items = res.items.map(item =>
-      this.processItem({
-        ...item,
-        // TODO: unify this with data-provider getOne method
-        kind: kind.replace(/List$/g, ''),
-        apiVersion,
-      })
-    );
-    return res;
-  }
-
+class RelationPlugin implements BasePlugin {
   processItem(item: Unstructured): Unstructured {
     this.processPodSelector(item);
     return item;
   }
 
-  restoreData(res: UnstructuredList): UnstructuredList {
-    res.items = res.items.map(item => this.restoreItem(item));
-    return res;
-  }
-
   restoreItem(item: Unstructured): Unstructured {
-    delete (item.metadata as ExtendObjectMeta).relations;
-    return item;
+    return {
+      ...item,
+      metadata: omit(item.metadata, 'relations')
+    };
   }
 
   processPodSelector(item: Unstructured): Unstructured {
