@@ -6,7 +6,7 @@ export function getObjectConstructor(resource: string, meta?: MetaQuery) {
   return meta?.resourceBasePath
     ? {
         resourceBasePath: meta?.resourceBasePath,
-        resource,
+        resource: meta?.k8sResource || resource,
         namespace: meta.namespace,
       }
     : {
@@ -26,7 +26,7 @@ export class GlobalStore {
   private _apiUrl = '';
   private watchWsApiUrl?: string;
   prefix?: string;
-  fieldManager?: string
+  fieldManager?: string;
 
   private store = new Map<string, UnstructuredList>();
   private subscribers = new Map<string, ((data: WatchEvent) => void)[]>();
@@ -104,6 +104,6 @@ export class GlobalStore {
     this._apiUrl = apiUrl;
     this.watchWsApiUrl = watchWsApiUrl;
     this.prefix = prefix;
-    this.fieldManager = fieldManager
+    this.fieldManager = fieldManager;
   }
 }
