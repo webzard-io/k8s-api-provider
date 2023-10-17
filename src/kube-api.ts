@@ -626,7 +626,7 @@ export class KubeSdk {
 
   public async applyYaml(
     specs: Unstructured[],
-    strategy?: string,
+    strategy: string = 'application/apply-patch+yaml',
     replacePaths?: string[][]
   ) {
     const validSpecs = specs
@@ -663,7 +663,7 @@ export class KubeSdk {
       const response = exist
         ? await this.patch(
             spec,
-            strategy || 'application/apply-patch+yaml',
+            strategy,
             replacePaths?.[index]
           )
         : await this.create(spec);
