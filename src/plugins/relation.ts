@@ -8,6 +8,7 @@ import {
 import { Job } from 'kubernetes-types/batch/v1';
 import { Unstructured, UnstructuredList } from '../kube-api';
 import { Service } from 'kubernetes-types/core/v1';
+import { omit } from 'lodash';
 
 export type Relation = {
   kind: string;
@@ -49,8 +50,10 @@ class RelationPlugin {
   }
 
   restoreItem(item: Unstructured): Unstructured {
-    delete (item.metadata as ExtendObjectMeta).relations;
-    return item;
+    return {
+      ...item,
+      metadata: omit(item.metadata, 'relations')
+    };
   }
 
   processPodSelector(item: Unstructured): Unstructured {
