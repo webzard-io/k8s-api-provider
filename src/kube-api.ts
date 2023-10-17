@@ -1,6 +1,6 @@
 // highly inspired by https://github.com/lensapp/lens/blob/1a29759bff/src/common/k8s-api/kube-api.ts
 import ky, { SearchParamsOption, Options } from 'ky';
-import { get, cloneDeep } from "lodash";
+import { get, cloneDeep } from 'lodash';
 import type {
   APIResource,
   APIResourceList,
@@ -170,6 +170,56 @@ type KubeAPIEvent = {
 
 const event = mitt<KubeAPIEvent>();
 
+const _globalApiVersionResourceCache: Record<string, ApiVersionResourceCache> =
+  {};
+
+function initApiVersionResourceCache(basePath: string) {
+  if (!_globalApiVersionResourceCache[basePath]) {
+    _globalApiVersionResourceCache[basePath] = new ApiVersionResourceCache(
+      basePath
+    );
+  }
+  return _globalApiVersionResourceCache[basePath];
+}
+
+class ApiVersionResourceCache {
+  cache: Record<string, APIResourceList> = {};
+  basePath: string;
+
+  constructor(basePath: string) {
+    this.basePath = basePath;
+  }
+
+  public async resource(
+    apiVersion: string,
+    kind: string
+  ): Promise<APIResource> {
+    const localVarPath = this.apiVersionPath(apiVersion);
+    const { resources } = await this.fetchAndCache(localVarPath);
+    return resources.find(r => r.kind === kind)!;
+  }
+
+  public async resourceByName(resourcePath: string, name: string) {
+    const localVarPath = `${this.basePath}${resourcePath}`;
+    const { resources } = await this.fetchAndCache(localVarPath);
+    return resources.find(r => r.name === name)!;
+  }
+
+  public apiVersionPath(apiVersion: string): string {
+    const api = apiVersion.includes('/') ? 'apis' : 'api';
+
+    return [this.basePath, api, apiVersion].join('/');
+  }
+
+  private async fetchAndCache(localVarPath: string) {
+    if (!this.cache[localVarPath]) {
+      const resources = await ky.get(localVarPath).json<APIResourceList>();
+      this.cache[localVarPath] = resources;
+    }
+    return this.cache[localVarPath];
+  }
+}
+
 export class KubeApi<T extends UnstructuredList> {
   private watchWsBasePath?: string;
   private basePath: string;
@@ -179,6 +229,7 @@ export class KubeApi<T extends UnstructuredList> {
   private maxTimeout = Math.pow(2, 10) * 1000;
   private retryTimes = 0;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
+  private apiVersionResourceCache: ApiVersionResourceCache;
 
   constructor(protected options: KubeApiOptions) {
     const { objectConstructor, basePath, watchWsBasePath } = options;
@@ -189,6 +240,7 @@ export class KubeApi<T extends UnstructuredList> {
     this.resourceBasePath = objectConstructor.resourceBasePath;
     this.namespace = objectConstructor.namespace;
     this.resource = objectConstructor.resource;
+    this.apiVersionResourceCache = initApiVersionResourceCache(basePath);
   }
 
   public resetRetryState() {
@@ -316,12 +368,23 @@ export class KubeApi<T extends UnstructuredList> {
       onEvent?.(event);
     };
 
+    // client-side watch simulated by applyYaml
     stops.push(this.watchBySdk(response, handleEvent));
 
-    if (this.watchWsBasePath) {
-      stops.push(this.watchByWebsocket(url, response, handleEvent, retry));
-    } else {
-      stops.push(this.watchByHttp(url, response, handleEvent, retry));
+    // server-side watch
+    const resource = await this.apiVersionResourceCache.resourceByName(
+      this.resourceBasePath,
+      this.resource
+    );
+    const verbs = resource?.verbs || [];
+    const supportServerWatch = verbs.includes('watch');
+
+    if (supportServerWatch) {
+      if (this.watchWsBasePath) {
+        stops.push(this.watchByWebsocket(url, response, handleEvent, retry));
+      } else {
+        stops.push(this.watchByHttp(url, response, handleEvent, retry));
+      }
     }
 
     return () => {
@@ -530,7 +593,7 @@ export class KubeApi<T extends UnstructuredList> {
 
 type KubeSdkOptions = {
   basePath: string;
-  fieldManager?: string
+  fieldManager?: string;
 };
 
 type KubernetesApiAction =
@@ -542,8 +605,6 @@ type KubernetesApiAction =
   | 'list'
   | 'replace';
 
-const apiVersionResourceCache: Record<string, APIResourceList> = {};
-
 type OperationOptions = {
   sync?: boolean;
 };
@@ -551,32 +612,37 @@ type OperationOptions = {
 export class KubeSdk {
   private basePath: string;
   private defaultNamespace = 'default';
-  private fieldManager?: string
+  private fieldManager?: string;
+  private apiVersionResourceCache: ApiVersionResourceCache;
 
   constructor(protected options: KubeSdkOptions) {
     const { basePath, fieldManager } = options;
 
     this.options = options;
     this.basePath = basePath;
-    this.fieldManager = fieldManager
+    this.fieldManager = fieldManager;
+    this.apiVersionResourceCache = initApiVersionResourceCache(basePath);
   }
 
-
-  public async applyYaml(specs: Unstructured[], strategy?: string, replacePaths?: string[][]) {
+  public async applyYaml(
+    specs: Unstructured[],
+    strategy?: string,
+    replacePaths?: string[][]
+  ) {
     const validSpecs = specs
-    .filter(s => s && s.kind && s.metadata)
-    .map(spec => relationPlugin.restoreItem(spec));
+      .filter(s => s && s.kind && s.metadata)
+      .map(spec => relationPlugin.restoreItem(spec));
     const changed: Unstructured[] = [];
     const created: Unstructured[] = [];
     const updated: Unstructured[] = [];
 
     for (const index in validSpecs) {
       const originSpec = validSpecs[index];
-      const spec = cloneDeep(originSpec)
+      const spec = cloneDeep(originSpec);
       spec.metadata = spec.metadata || {};
       spec.metadata.annotations = spec.metadata.annotations || {};
 
-      if (strategy === "application/apply-patch+yaml") {
+      if (strategy === 'application/apply-patch+yaml') {
         delete spec.metadata.managedFields;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         delete (spec as any).metadata.resourceVersion;
@@ -594,20 +660,20 @@ export class KubeSdk {
         }
       }
 
-        const response = exist
-          ? await this.patch(
+      const response = exist
+        ? await this.patch(
             spec,
-            strategy || "application/apply-patch+yaml",
+            strategy || 'application/apply-patch+yaml',
             replacePaths?.[index]
           )
-          : await this.create(spec);
+        : await this.create(spec);
 
-        if (exist) {
-          updated.push(response as Unstructured);
-        } else {
-          created.push(response as Unstructured);
-        }
-        changed.push(response as Unstructured);
+      if (exist) {
+        updated.push(response as Unstructured);
+      } else {
+        created.push(response as Unstructured);
+      }
+      changed.push(response as Unstructured);
     }
 
     if (created.length) {
@@ -677,13 +743,20 @@ export class KubeSdk {
     return res;
   }
 
-  private async patch(spec: K8sObject, strategy: string, replacePaths?: string[]) {
+  private async patch(
+    spec: K8sObject,
+    strategy: string,
+    replacePaths?: string[]
+  ) {
     const url = await this.specUriPath(spec, 'patch');
-    const json = strategy === "application/json-patch+json" ? (replacePaths || []).map(path => ({
-      op: "replace",
-      path: "/" + path.split(".").join("/"),
-      value: get(spec, path)
-    })) : spec;
+    const json =
+      strategy === 'application/json-patch+json'
+        ? (replacePaths || []).map(path => ({
+            op: 'replace',
+            path: '/' + path.split('.').join('/'),
+            value: get(spec, path),
+          }))
+        : spec;
     const res = await ky
       .patch(url, {
         headers: {
@@ -727,12 +800,6 @@ export class KubeSdk {
     return res;
   }
 
-  private apiVersionPath(apiVersion: string): string {
-    const api = apiVersion.includes('/') ? 'apis' : 'api';
-
-    return [this.basePath, api, apiVersion].join('/');
-  }
-
   private async specUriPath(
     spec: K8sObject,
     action: KubernetesApiAction
@@ -744,7 +811,10 @@ export class KubeSdk {
     spec.apiVersion = spec.apiVersion || 'v1';
     spec.metadata = spec.metadata || {};
 
-    const resource = await this.resource(spec.apiVersion, spec.kind);
+    const resource = await this.apiVersionResourceCache.resource(
+      spec.apiVersion,
+      spec.kind
+    );
 
     if (!resource) {
       throw new Error(
@@ -756,7 +826,9 @@ export class KubeSdk {
       spec.metadata.namespace = this.defaultNamespace;
     }
 
-    const parts = [this.apiVersionPath(spec.apiVersion)];
+    const parts = [
+      this.apiVersionResourceCache.apiVersionPath(spec.apiVersion),
+    ];
 
     if (resource.namespaced && spec.metadata.namespace) {
       parts.push(
@@ -776,34 +848,5 @@ export class KubeSdk {
     }
 
     return parts.join('/').toLowerCase();
-  }
-
-  private async resource(
-    apiVersion: string,
-    kind: string
-  ): Promise<APIResource> {
-    const cacheKey = this.getApiVersionCacheKey(apiVersion);
-
-    if (apiVersionResourceCache[cacheKey]) {
-      const resource = apiVersionResourceCache[cacheKey].resources.find(
-        r => r.kind === kind
-      );
-      if (resource) {
-        return resource;
-      }
-    }
-
-    const localVarPath = this.apiVersionPath(apiVersion);
-
-    const resources = await ky.get(localVarPath).json<APIResourceList>();
-    apiVersionResourceCache[cacheKey] = resources;
-
-    return apiVersionResourceCache[cacheKey].resources.find(
-      r => r.kind === kind
-    )!;
-  }
-
-  private getApiVersionCacheKey(apiVersion: string) {
-    return `${apiVersion}@${this.basePath}`;
   }
 }
