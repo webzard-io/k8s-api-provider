@@ -89,9 +89,121 @@ describe('filterData function', () => {
   });
 
   it('should return unfiltered data if no filters are provided', () => {
-    const filters = [];
+    const filters: CrudFilters = [];
     const filteredData = filterData(filters, unstructuredData);
     expect(filteredData).toEqual(unstructuredData);
+  });
+
+  it('filters with nested structure', () => {
+    const filters: CrudFilters = [
+      {
+        field: 'status.state', operator: 'eq', value: 'Normal',
+      },
+      {
+        field: 'status.state', operator: 'in', value: [
+          'InUpdate',
+          'InRollback',
+        ],
+      },
+      {
+        operator: 'and', value: [
+          {
+            field: 'metadata.deletionTimestamp', operator: 'nnull', value: true,
+          },
+          {
+            field: 'status.state', operator: 'ne', value: 'DeleteFailed',
+          },
+        ],
+      },
+    ];
+    const data: (Unstructured & { status: { state: string; } })[] = [
+      {
+        apiVersion: 'v1',
+        kind: 'Pod',
+        metadata: { name: 'Pod A', namespace: 'Namespace A' },
+        status: {
+          state: 'Normal',
+        },
+      },
+      {
+        apiVersion: 'v1',
+        kind: 'Pod',
+        metadata: { name: 'Pod B', namespace: 'Namespace B' },
+        status: {
+          state: 'InRollback',
+        },
+      },
+      {
+        apiVersion: 'v1',
+        kind: 'Pod',
+        metadata: { name: 'Pod C', namespace: 'Namespace A', deletionTimestamp: 'mock time' },
+        status: {
+          state: 'InUpgrade',
+        },
+      },
+    ];
+
+    expect(filterData([
+      {
+        operator: 'and',
+        value: [
+          filters[0],
+        ],
+      },
+    ], data)).toEqual([{
+      apiVersion: 'v1',
+      kind: 'Pod',
+      metadata: { name: 'Pod A', namespace: 'Namespace A' },
+      status: {
+        state: 'Normal',
+      },
+    }]);
+
+    expect(filterData([
+      {
+        operator: 'and',
+        value: [
+          filters[1],
+        ],
+      },
+    ], data)).toEqual([{
+      apiVersion: 'v1',
+      kind: 'Pod',
+      metadata: { name: 'Pod B', namespace: 'Namespace B' },
+      status: {
+        state: 'InRollback',
+      },
+    }]);
+
+    expect(filterData([
+      {
+        operator: 'and',
+        value: [
+          filters[2],
+        ],
+      },
+    ], data)).toEqual([{
+      apiVersion: 'v1',
+      kind: 'Pod',
+      metadata: { name: 'Pod C', namespace: 'Namespace A', deletionTimestamp: 'mock time' },
+      status: {
+        state: 'InUpgrade',
+      },
+    },]);
+
+    expect(filterData([
+      {
+        operator: 'and',
+        value: filters,
+      },
+    ], data)).toEqual([]);
+
+    expect(filterData([
+      {
+        operator: 'or',
+        value: filters,
+      },
+    ], data)).toEqual(data);
   });
 });
 
@@ -107,8 +219,8 @@ describe('evaluateFilter function', () => {
       total: 10,
       labels: ['label-1', 'label-2'],
       description: null,
-      type: 'type-1'
-    }
+      type: 'type-1',
+    },
   } as Unstructured;
 
   test('handles "eq" operator', () => {
@@ -190,13 +302,13 @@ describe('evaluateFilter function', () => {
   });
 
   test('handles "null" operator', () => {
-    const result = evaluateFilter(mockItem, 'spec.description', 'null', null);
-    expect(result).toBeTruthy();
+    expect(evaluateFilter(mockItem, 'spec.description', 'null', null)).toBeTruthy();
+    expect(evaluateFilter(mockItem, 'spec.non_exist_path', 'null', null)).toBeFalsy();
   });
 
   test('handles "nnull" operator', () => {
-    const result = evaluateFilter(mockItem, 'spec.total', 'nnull', null);
-    expect(result).toBeTruthy();
+    expect(evaluateFilter(mockItem, 'spec.total', 'nnull', null)).toBeTruthy();
+    expect(evaluateFilter(mockItem, 'spec.non_exist_path', 'null', null)).toBeFalsy();
   });
 
   test('handles "startswith" operator', () => {
@@ -238,4 +350,4 @@ describe('evaluateFilter function', () => {
     const result = evaluateFilter(mockItem, 'metadata.name', 'nendswiths', 'SERVICE');
     expect(result).toBeTruthy();
   });
-})
+});
