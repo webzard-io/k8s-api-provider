@@ -41,16 +41,18 @@ export const dataProvider = (
     const [namespace, name] =
       idParts.length === 1 ? [undefined, idParts[0]] : idParts;
     const { items, kind, apiVersion } = await globalStore.get(resource, meta);
-
     const data = items.find(
       item =>
         item.metadata.name === name && item.metadata.namespace === namespace
     );
-
+    if (!data) {
+      console.error(`resource: ${resource} not include id: ${id}`)
+      return { data: null as unknown as TData }
+    }
     return {
       data: {
         ...data,
-        id: data ? getId(data) : '',
+        id: getId(data),
         kind: kind.replace(/List$/g, ''),
         apiVersion: apiVersion,
       } as unknown as TData,
@@ -62,7 +64,6 @@ export const dataProvider = (
       params: Parameters<DataProvider['getList']>['0']
     ): Promise<GetListResponse<TData>> => {
       const { resource, pagination, filters, sorters, meta } = params;
-
       let { items } = await globalStore.get<TData>(resource, meta);
 
       if (filters) {
