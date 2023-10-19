@@ -52,7 +52,7 @@ class RelationPlugin {
   restoreItem(item: Unstructured): Unstructured {
     return {
       ...item,
-      metadata: omit(item.metadata, 'relations')
+      metadata: omit(item.metadata, 'relations'),
     };
   }
 
@@ -88,8 +88,12 @@ class RelationPlugin {
     // empty selector or legacy resources like Service
     if (!selector.matchLabels && !selector.matchExpressions) {
       selector.matchLabels = {};
-      for (const key in selector) {
+      for (const key of Object.keys(selector)) {
+        if (key === 'matchLabels') {
+          continue;
+        }
         selector.matchLabels[key] = (selector as Record<string, string>)[key];
+        delete (selector as Record<string, string>)[key];
       }
     }
 
