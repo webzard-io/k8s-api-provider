@@ -1,39 +1,33 @@
-import { CrudFilters, CrudOperators, LogicalFilter } from '@refinedev/core';
+import { CrudFilter, CrudFilters, CrudOperators } from '@refinedev/core';
 import _ from 'lodash';
 import { Unstructured } from '../kube-api';
 
+function deepFilter(item: Unstructured, filter: CrudFilter): boolean {
+  if ('field' in filter) {
+    // Logical filter
+    const { field, operator, value } = filter;
+    return evaluateFilter(item, field, operator, value);
+  } else {
+    // Conditional filter
+    const { operator, value } = filter;
+    if (operator === 'or') {
+      return value.some(subFilter => deepFilter(item, subFilter));
+    } else if (operator === 'and') {
+      return value.every(subFilter => deepFilter(item, subFilter));
+    }
+  }
+  return true;
+}
+
 export const filterData = (
   filters: CrudFilters,
-  data: Unstructured[]
+  data: Unstructured[],
 ): Unstructured[] => {
   if (!filters || filters.length === 0) {
     return data;
   }
 
-  return data.filter(item => {
-    return filters.every(filter => {
-      if ('field' in filter) {
-        // Logical filter
-        const { field, operator, value } = filter;
-        return evaluateFilter(item, field, operator, value);
-      } else {
-        // Conditional filter
-        const { operator, value } = filter;
-        if (operator === 'or') {
-          return value.some(subFilter => {
-            const { field, operator, value } = subFilter as LogicalFilter;
-            return evaluateFilter(item, field, operator, value);
-          });
-        } else if (operator === 'and') {
-          return value.every(subFilter => {
-            const { field, operator, value } = subFilter as LogicalFilter;
-            return evaluateFilter(item, field, operator, value);
-          });
-        }
-      }
-      return true;
-    });
-  });
+  return data.filter(item => filters.every(filter => deepFilter(item, filter)));
 };
 
 export function evaluateFilter(
@@ -41,8 +35,12 @@ export function evaluateFilter(
   field: string,
   operator: Exclude<CrudOperators, 'or' | 'and'>,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value: any
+  value: any,
 ): boolean {
+  if (!_.has(item, field)) {
+    return false;
+  }
+
   const fieldValue = _.get(item, field);
 
   switch (operator) {
@@ -66,7 +64,7 @@ export function evaluateFilter(
         if (Array.isArray(fieldValue)) {
           return _.includes(fieldValue, item);
         }
-        return item === fieldValue
+        return item === fieldValue;
       });
     }
     case 'nin': {
@@ -77,7 +75,7 @@ export function evaluateFilter(
         if (Array.isArray(fieldValue)) {
           return !_.includes(fieldValue, item);
         }
-        return item !== fieldValue
+        return item !== fieldValue;
       });
     }
     case 'contains':
@@ -92,10 +90,12 @@ export function evaluateFilter(
       return value[0] <= fieldValue && fieldValue <= value[1];
     case 'nbetween':
       return value[0] > fieldValue || fieldValue > value[1];
-    case 'null':
-      return fieldValue === null;
-    case 'nnull':
-      return fieldValue !== null;
+    case 'null': {
+      return _.isNil(fieldValue);
+    }
+    case 'nnull': {
+      return !_.isNil(fieldValue);
+    }
     case 'startswith':
       return fieldValue.startsWith(value);
     case 'nstartswith':
