@@ -21,7 +21,7 @@ function deepFilter(item: Unstructured, filter: CrudFilter): boolean {
 
 export const filterData = (
   filters: CrudFilters,
-  data: Unstructured[],
+  data: Unstructured[]
 ): Unstructured[] => {
   if (!filters || filters.length === 0) {
     return data;
@@ -35,7 +35,7 @@ export function evaluateFilter(
   field: string,
   operator: Exclude<CrudOperators, 'or' | 'and'>,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value: any,
+  value: any
 ): boolean {
   if (!_.has(item, field)) {
     return false;
