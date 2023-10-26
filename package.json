@@ -14,6 +14,7 @@
   },
   "scripts": {
     "start": "tsup --watch",
+    "prepublish": "tsup",
     "build": "tsup",
     "lint": "eslint src --ext .ts --quiet",
     "typings": "tsc",
