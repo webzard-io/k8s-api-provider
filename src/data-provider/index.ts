@@ -8,7 +8,7 @@ import {
   CreateResponse,
   MetaQuery,
   UpdateResponse,
-  DeleteOneResponse
+  DeleteOneResponse,
 } from '@refinedev/core';
 import { KubeSdk, Unstructured } from '../kube-api';
 import { filterData } from '../utils/filter-data';
@@ -46,8 +46,8 @@ export const dataProvider = (
         item.metadata.name === name && item.metadata.namespace === namespace
     );
     if (!data) {
-      console.error(`resource: ${resource} not include id: ${id}`)
-      return { data: null as unknown as TData }
+      console.error(`resource: ${resource} not include id: ${id}`);
+      return { data: null as unknown as TData };
     }
     return {
       data: {
@@ -87,27 +87,35 @@ export const dataProvider = (
       };
     },
 
-    getMany: async<TData extends BaseRecord = BaseRecord, TVariables = unknown> (params: {
+    getMany: async <
+      TData extends BaseRecord = BaseRecord,
+      TVariables = unknown
+    >(params: {
       resource: string;
       ids: BaseKey[];
       variables?: TVariables | undefined;
       meta?: MetaQuery | undefined;
       metaData?: MetaQuery | undefined;
     }): Promise<GetManyResponse<TData>> => {
-      const { ids, ...rest } = params
+      const { ids, ...rest } = params;
       const data = await Promise.all(
         ids.map(id => getOne({ id, ...rest }).then(v => v.data))
       );
 
       return {
-        data: data  as unknown as TData[],
+        data: data as unknown as TData[],
       };
     },
 
-    create: async<TData extends BaseRecord = BaseRecord> ({ variables, meta }:Parameters<DataProvider['create']>['0']): Promise<CreateResponse<TData>> => {
+    create: async <TData extends BaseRecord = BaseRecord>({
+      variables,
+      meta,
+    }: Parameters<DataProvider['create']>['0']): Promise<
+      CreateResponse<TData>
+    > => {
       const sdk = new KubeSdk({
         basePath: globalStore.apiUrl,
-        fieldManager: globalStore.fieldManager
+        fieldManager: globalStore.fieldManager,
       });
 
       const data = await sdk.applyYaml([
@@ -123,10 +131,15 @@ export const dataProvider = (
       };
     },
 
-    update: async<TData extends BaseRecord = BaseRecord> ({ variables, meta }:Parameters<DataProvider['update']>['0']): Promise<UpdateResponse<TData>> => {
+    update: async <TData extends BaseRecord = BaseRecord>({
+      variables,
+      meta,
+    }: Parameters<DataProvider['update']>['0']): Promise<
+      UpdateResponse<TData>
+    > => {
       const sdk = new KubeSdk({
         basePath: globalStore.apiUrl,
-        fieldManager: globalStore.fieldManager
+        fieldManager: globalStore.fieldManager,
       });
       const params = [
         {
@@ -134,8 +147,12 @@ export const dataProvider = (
           apiVersion: getApiVersion(meta?.resourceBasePath),
           kind: meta?.kind,
         },
-      ]
-      const data = await sdk.applyYaml(params, meta?.strategy, meta?.replacePaths);
+      ];
+      const data = await sdk.applyYaml(
+        params,
+        meta?.strategy,
+        meta?.replacePaths
+      );
 
       return {
         data: data[0] as unknown as TData,
@@ -144,10 +161,17 @@ export const dataProvider = (
 
     getOne,
 
-    deleteOne:  async<TData extends BaseRecord = BaseRecord> ({ resource, id, meta, ...rest }:Parameters<DataProvider['deleteOne']>['0']): Promise<DeleteOneResponse<TData>> => {
+    deleteOne: async <TData extends BaseRecord = BaseRecord>({
+      resource,
+      id,
+      meta,
+      ...rest
+    }: Parameters<DataProvider['deleteOne']>['0']): Promise<
+      DeleteOneResponse<TData>
+    > => {
       const sdk = new KubeSdk({
         basePath: globalStore.apiUrl,
-        fieldManager: globalStore.fieldManager
+        fieldManager: globalStore.fieldManager,
       });
 
       const { data: current } = await getOne({ id, resource, meta, ...rest });

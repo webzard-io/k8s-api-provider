@@ -386,7 +386,6 @@ export class KubeApi<T extends UnstructuredList> {
         stops.push(this.watchByHttp(url, response, handleEvent, retry));
       }
     }
-
     return () => {
       stops.forEach(stop => stop());
     };
@@ -433,7 +432,7 @@ export class KubeApi<T extends UnstructuredList> {
     let shouldCloseAfterConnected = false;
     let stopWatch: () => void = () => {
       if (socket.readyState === socket.OPEN) {
-        socket.close(3001, 'DOVETAIL_MANUAL_CLOSE');
+        socket.close(3001, 'KUBEAPI_MANUAL_CLOSE');
       } else {
         shouldCloseAfterConnected = true;
       }
@@ -445,7 +444,7 @@ export class KubeApi<T extends UnstructuredList> {
 
     socket.addEventListener('open', () => {
       if (shouldCloseAfterConnected) {
-        socket.close(3001, 'DOVETAIL_MANUAL_CLOSE');
+        socket.close(3001, 'KUBEAPI_MANUAL_CLOSE');
         return;
       }
       heartbeat(socket);
@@ -459,7 +458,7 @@ export class KubeApi<T extends UnstructuredList> {
     socket.addEventListener('close', evt => {
       clearTimeout((socket as ExtendedWebsocketClient).pingTimeout);
 
-      if (evt.reason === 'DOVETAIL_MANUAL_CLOSE') {
+      if (evt.reason === 'KUBEAPI_MANUAL_CLOSE') {
         return;
       }
 
@@ -661,11 +660,7 @@ export class KubeSdk {
       }
 
       const response = exist
-        ? await this.patch(
-            spec,
-            strategy,
-            replacePaths?.[index]
-          )
+        ? await this.patch(spec, strategy, replacePaths?.[index])
         : await this.create(spec);
 
       if (exist) {

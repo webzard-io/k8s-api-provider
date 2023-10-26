@@ -1,5 +1,10 @@
 import { MetaQuery } from '@refinedev/core';
-import { KubeApi, UnstructuredList, WatchEvent } from './kube-api';
+import {
+  KubeApi,
+  UnstructuredList,
+  WatchEvent,
+  StopWatchHandler,
+} from './kube-api';
 import { relationPlugin } from './plugins/relation';
 
 export function getObjectConstructor(resource: string, meta?: MetaQuery) {
@@ -30,6 +35,8 @@ export class GlobalStore {
 
   private store = new Map<string, UnstructuredList>();
   private subscribers = new Map<string, ((data: WatchEvent) => void)[]>();
+  private kubeApi?: KubeApi<UnstructuredList>;
+  private stopWatch?: StopWatchHandler;
 
   constructor(params: GlobalStoreInitParams) {
     this.init(params);
@@ -40,7 +47,7 @@ export class GlobalStore {
   get<T = UnstructuredList>(resource: string, meta?: MetaQuery): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!this.store.has(resource)) {
-        const api = new KubeApi({
+        this.kubeApi = new KubeApi({
           basePath: this._apiUrl,
           watchWsBasePath: this.watchWsApiUrl,
           objectConstructor: getObjectConstructor(resource, meta),
@@ -48,7 +55,7 @@ export class GlobalStore {
 
         let resolved = false;
 
-        api
+        this.kubeApi
           .listWatch({
             onResponse: res => {
               relationPlugin.processData(res);
@@ -62,6 +69,9 @@ export class GlobalStore {
               relationPlugin.processItem(event.object);
               this.notify(resource, event);
             },
+          })
+          .then(stop => {
+            this.stopWatch = stop;
           })
           .catch(e => reject(e));
       } else {
@@ -98,6 +108,7 @@ export class GlobalStore {
     this.notify(resource, data);
   }
   init(params: GlobalStoreInitParams) {
+    this.destroy();
     const { apiUrl, watchWsApiUrl, prefix, fieldManager } = params;
     this.store = new Map();
     this.subscribers = new Map();
@@ -105,5 +116,10 @@ export class GlobalStore {
     this.watchWsApiUrl = watchWsApiUrl;
     this.prefix = prefix;
     this.fieldManager = fieldManager;
+  }
+  destroy() {
+    this.store.clear();
+    this.subscribers.clear();
+    this.stopWatch?.();
   }
 }

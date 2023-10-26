@@ -7,10 +7,8 @@ export const paginateData = (
 ): Unstructured[] => {
   const { current = 1, pageSize = 20, mode } = pagination ?? {};
   if (mode !== 'client') {
-    console.warn(
-      'k8s no support server paginateData'
-    );
-    return data
+    console.warn('k8s no support server paginateData');
+    return data;
   }
   let start = 0;
   let end = data.length;
