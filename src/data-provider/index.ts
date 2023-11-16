@@ -118,13 +118,15 @@ export const dataProvider = (
         fieldManager: globalStore.fieldManager,
       });
 
-      const data = await sdk.applyYaml([
+      const data = await sdk.applyYaml({
+        specs: [
         {
           ...(variables as unknown as Unstructured),
           apiVersion: getApiVersion(meta?.resourceBasePath),
           kind: meta?.kind,
-        },
-      ]);
+        }], 
+        forceApply:  meta?.forceApply ?? false
+      });
 
       return {
         data: data[0] as unknown as TData,
@@ -148,11 +150,12 @@ export const dataProvider = (
           kind: meta?.kind,
         },
       ];
-      const data = await sdk.applyYaml(
-        params,
-        meta?.strategy,
-        meta?.replacePaths
-      );
+      const data = await sdk.applyYaml({
+        specs: params,
+        strategy: meta?.strategy,
+        replacePaths: meta?.replacePaths,
+        forceApply: meta?.forceApply ?? true,
+      });
 
       return {
         data: data[0] as unknown as TData,

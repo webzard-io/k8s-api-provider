@@ -32,6 +32,13 @@ export type Unstructured = {
   metadata: ObjectMeta;
 };
 
+export type KubeApplyParams = {
+  specs: Unstructured[];
+  strategy?: string;
+  replacePaths?: string[][];
+  forceApply?: boolean;
+};
+
 type KubeApiQueryParams = {
   watch?: boolean | number;
   resourceVersion?: string;
@@ -623,11 +630,13 @@ export class KubeSdk {
     this.apiVersionResourceCache = initApiVersionResourceCache(basePath);
   }
 
-  public async applyYaml(
-    specs: Unstructured[],
-    strategy: string = 'application/apply-patch+yaml',
-    replacePaths?: string[][]
-  ) {
+  public async applyYaml(params: KubeApplyParams) {
+    const {
+      specs,
+      strategy = 'application/apply-patch+yaml',
+      replacePaths,
+      forceApply = false,
+    } = params;
     const validSpecs = specs
       .filter(s => s && s.kind && s.metadata)
       .map(spec => relationPlugin.restoreItem(spec));
@@ -658,7 +667,9 @@ export class KubeSdk {
           throw e;
         }
       }
-
+      if (!forceApply && exist) {
+        throw new Error('Force apply is not allowed when already exists.');
+      }
       const response = exist
         ? await this.patch(spec, strategy, replacePaths?.[index])
         : await this.create(spec);
