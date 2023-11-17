@@ -73,6 +73,7 @@ export const dataProvider = (
       if (sorters) {
         items = sortData(sorters, items);
       }
+      const _total = items.length
 
       if (pagination) {
         items = paginateData(pagination, items);
@@ -83,7 +84,7 @@ export const dataProvider = (
           ...item,
           id: getId(item),
         })),
-        total: items.length,
+        total: _total,
       };
     },
 

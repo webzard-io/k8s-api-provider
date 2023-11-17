@@ -6,8 +6,8 @@ export const paginateData = (
   data: Unstructured[]
 ): Unstructured[] => {
   const { current = 1, pageSize = 20, mode } = pagination ?? {};
-  if (mode !== 'client') {
-    console.warn('k8s no support server paginateData');
+  if (mode !== 'server') {
+    console.warn('Skip simulated paging.');
     return data;
   }
   let start = 0;
