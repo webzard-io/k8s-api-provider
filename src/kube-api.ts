@@ -623,6 +623,31 @@ export class KubeSdk {
     this.apiVersionResourceCache = initApiVersionResourceCache(basePath);
   }
 
+  public async createyYaml(specs: Unstructured[]) {
+    const validSpecs = specs.filter(s => s && s.kind && s.metadata);
+    const created: Unstructured[] = [];
+
+    for (const index in validSpecs) {
+      const originSpec = validSpecs[index];
+      const spec = cloneDeep(originSpec);
+      spec.metadata.annotations = spec.metadata.annotations || {};
+
+      const response = await this.create(spec);
+
+      created.push(response as Unstructured);
+    }
+
+    if (created.length) {
+      event.emit('change', {
+        type: 'ADDED',
+        basePath: this.basePath,
+        items: created,
+      });
+    }
+
+    return created;
+  }
+
   public async applyYaml(
     specs: Unstructured[],
     strategy: string = 'application/apply-patch+yaml',
@@ -638,7 +663,6 @@ export class KubeSdk {
     for (const index in validSpecs) {
       const originSpec = validSpecs[index];
       const spec = cloneDeep(originSpec);
-      spec.metadata = spec.metadata || {};
       spec.metadata.annotations = spec.metadata.annotations || {};
 
       if (strategy === 'application/apply-patch+yaml') {
