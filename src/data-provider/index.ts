@@ -119,7 +119,7 @@ export const dataProvider = (
         fieldManager: globalStore.fieldManager,
       });
 
-      const data = await sdk.applyYaml([
+      const data = await sdk.createyYaml([
         {
           ...(variables as unknown as Unstructured),
           apiVersion: getApiVersion(meta?.resourceBasePath),
