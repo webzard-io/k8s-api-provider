@@ -132,6 +132,7 @@ export const dataProvider = (
       const sdk = new KubeSdk({
         basePath: globalStore.apiUrl,
         fieldManager: globalStore.fieldManager,
+        kubeApiTimeout: globalStore.kubeApiTimeout,
       });
       try {
         const data = await sdk.createyYaml([
@@ -198,8 +199,8 @@ export const dataProvider = (
         const sdk = new KubeSdk({
           basePath: globalStore.apiUrl,
           fieldManager: globalStore.fieldManager,
+          kubeApiTimeout: globalStore.kubeApiTimeout,
         });
-
         const { data: current } = await getOne({ id, resource, meta, ...rest });
 
         const data = await sdk.deleteYaml([current as Unstructured]);

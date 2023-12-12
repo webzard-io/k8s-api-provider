@@ -66,6 +66,7 @@ type KubeApiListOptions = {
 type KubeApiListWatchOptions<T> = KubeApiListOptions & {
   onResponse?: (response: T) => void;
   onEvent?: (event: WatchEvent) => void;
+  signal?: AbortSignal;
 };
 
 type KubeApiLinkRef = {
@@ -84,6 +85,7 @@ type KubeObjectConstructor = {
 type KubeApiOptions = {
   basePath: string;
   watchWsBasePath?: string;
+  kubeApiTimeout?: number | false;
   /**
    * The constructor for the kube objects returned from the API
    */
@@ -230,9 +232,11 @@ export class KubeApi<T extends UnstructuredList> {
   private retryTimes = 0;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private apiVersionResourceCache: ApiVersionResourceCache;
+  private kubeApiTimeout?: false | number;
 
   constructor(protected options: KubeApiOptions) {
-    const { objectConstructor, basePath, watchWsBasePath } = options;
+    const { objectConstructor, basePath, watchWsBasePath, kubeApiTimeout } =
+      options;
 
     this.options = options;
     this.watchWsBasePath = watchWsBasePath;
@@ -241,6 +245,7 @@ export class KubeApi<T extends UnstructuredList> {
     this.namespace = objectConstructor.namespace;
     this.resource = objectConstructor.resource;
     this.apiVersionResourceCache = initApiVersionResourceCache(basePath);
+    this.kubeApiTimeout = kubeApiTimeout ?? false;
   }
 
   public resetRetryState() {
@@ -271,17 +276,19 @@ export class KubeApi<T extends UnstructuredList> {
     query,
     onResponse,
     onEvent,
+    signal,
   }: KubeApiListWatchOptions<T> = {}): Promise<StopWatchHandler> {
     const url = this.getUrl({ namespace });
     const watchUrl = this.watchWsBasePath
       ? this.getUrl({ namespace }, undefined, true)
       : url;
+
     const response = await this.list({
       namespace,
       query,
-      fetchOptions: { timeout: false },
+      fetchOptions: { timeout: this.kubeApiTimeout, signal },
     });
-    const stop = this.watch(
+    const stopWatch = await this.watch(
       watchUrl,
       response,
       onResponse,
@@ -293,7 +300,9 @@ export class KubeApi<T extends UnstructuredList> {
         onEvent,
       })
     );
-
+    const stop = () => {
+      stopWatch?.();
+    };
     onResponse?.(response);
 
     return stop;
@@ -498,7 +507,7 @@ export class KubeApi<T extends UnstructuredList> {
             watch: 1,
             resourceVersion,
           } as SearchParamsOption,
-          timeout: false,
+          timeout: this.kubeApiTimeout,
           signal,
         });
         const stream = streamResponse.body?.getReader();
@@ -593,6 +602,7 @@ export class KubeApi<T extends UnstructuredList> {
 type KubeSdkOptions = {
   basePath: string;
   fieldManager?: string;
+  kubeApiTimeout?: false | number;
 };
 
 type KubernetesApiAction =
@@ -613,14 +623,16 @@ export class KubeSdk {
   private defaultNamespace = 'default';
   private fieldManager?: string;
   private apiVersionResourceCache: ApiVersionResourceCache;
+  private kubeApiTimeout?: false | number;
 
   constructor(protected options: KubeSdkOptions) {
-    const { basePath, fieldManager } = options;
+    const { basePath, fieldManager, kubeApiTimeout } = options;
 
     this.options = options;
     this.basePath = basePath;
     this.fieldManager = fieldManager;
     this.apiVersionResourceCache = initApiVersionResourceCache(basePath);
+    this.kubeApiTimeout = kubeApiTimeout || 10000;
   }
 
   public async createyYaml(specs: Unstructured[]) {
@@ -744,6 +756,7 @@ export class KubeSdk {
     const res = await ky
       .get(url, {
         retry: 0,
+        timeout: this.kubeApiTimeout,
       })
       .json();
 
@@ -755,6 +768,7 @@ export class KubeSdk {
     const res = await ky
       .post(url, {
         retry: 0,
+        timeout: this.kubeApiTimeout,
         json: spec,
       })
       .json();
@@ -781,6 +795,7 @@ export class KubeSdk {
         headers: {
           'Content-Type': strategy,
         },
+        timeout: this.kubeApiTimeout,
         retry: 0,
         json,
         searchParams:
@@ -801,6 +816,7 @@ export class KubeSdk {
     const res = await ky
       .put(url, {
         retry: 0,
+        timeout: this.kubeApiTimeout,
         json: spec,
       })
       .json();
@@ -812,6 +828,7 @@ export class KubeSdk {
     const url = await this.specUriPath(spec, 'delete');
     const res = await ky
       .delete(url, {
+        timeout: this.kubeApiTimeout,
         retry: 0,
       })
       .json();
