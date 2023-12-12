@@ -25,8 +25,11 @@ export interface GlobalStoreInitParams {
   watchWsApiUrl?: string;
   prefix?: string;
   fieldManager?: string;
+  kubeApiTimeout?: false | number;
 }
-
+export interface CancelQueriesParams {
+  queryKeys?: string[];
+}
 export class GlobalStore {
   private _apiUrl = '';
   private watchWsApiUrl?: string;
@@ -35,27 +38,36 @@ export class GlobalStore {
 
   private store = new Map<string, UnstructuredList>();
   private subscribers = new Map<string, ((data: WatchEvent) => void)[]>();
-  private kubeApi?: KubeApi<UnstructuredList>;
-  private stopWatch?: StopWatchHandler;
+  private stopWatchHandlers = new Map<string, StopWatchHandler>();
+  private cancelControllers = new Map<string, AbortController>();
+  private _kubeApiTimeout?: false | number;
 
   constructor(params: GlobalStoreInitParams) {
     this.init(params);
   }
+
   get apiUrl() {
     return this._apiUrl;
   }
+
+  get kubeApiTimeout() {
+    return this._kubeApiTimeout;
+  }
+
   get<T = UnstructuredList>(resource: string, meta?: MetaQuery): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!this.store.has(resource)) {
-        this.kubeApi = new KubeApi({
+        const kubeApi = new KubeApi({
           basePath: this._apiUrl,
           watchWsBasePath: this.watchWsApiUrl,
           objectConstructor: getObjectConstructor(resource, meta),
+          kubeApiTimeout: this.kubeApiTimeout,
         });
-
+        const controller = new AbortController();
+        const { signal } = controller;
+        this.cancelControllers.set(resource, controller);
         let resolved = false;
-
-        this.kubeApi
+        kubeApi
           .listWatch({
             onResponse: res => {
               relationPlugin.processData(res);
@@ -69,9 +81,10 @@ export class GlobalStore {
               relationPlugin.processItem(event.object);
               this.notify(resource, event);
             },
+            signal,
           })
           .then(stop => {
-            this.stopWatch = stop;
+            this.stopWatchHandlers.set(resource, stop);
           })
           .catch(e => reject(e));
       } else {
@@ -104,22 +117,49 @@ export class GlobalStore {
       }
     }
   }
+
   publish(resource: string, data: WatchEvent) {
     this.notify(resource, data);
   }
+
   init(params: GlobalStoreInitParams) {
     this.destroy();
-    const { apiUrl, watchWsApiUrl, prefix, fieldManager } = params;
+    const { apiUrl, watchWsApiUrl, prefix, fieldManager, kubeApiTimeout } =
+      params;
     this.store = new Map();
     this.subscribers = new Map();
+    this.stopWatchHandlers = new Map();
+    this.cancelControllers = new Map();
     this._apiUrl = apiUrl;
     this.watchWsApiUrl = watchWsApiUrl;
     this.prefix = prefix;
     this.fieldManager = fieldManager;
+    this._kubeApiTimeout = kubeApiTimeout;
   }
+
   destroy() {
     this.store.clear();
     this.subscribers.clear();
-    this.stopWatch?.();
+    for (const stopWatch of this.stopWatchHandlers.values()) {
+      stopWatch?.();
+    }
+    this.stopWatchHandlers.clear();
+    this.cancelControllers.clear();
+  }
+  cancelQueries(params?: CancelQueriesParams) {
+    if (params?.queryKeys) {
+      for (const queryKey of params.queryKeys) {
+        const controller = this.cancelControllers.get(queryKey);
+        if (controller) {
+          controller.abort();
+          this.cancelControllers.delete(queryKey);
+        }
+      }
+      return;
+    }
+    for (const controller of this.cancelControllers.values()) {
+      controller.abort();
+    }
+    this.cancelControllers.clear();
   }
 }
