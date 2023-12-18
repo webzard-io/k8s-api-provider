@@ -4,8 +4,9 @@ import {
   UnstructuredList,
   WatchEvent,
   StopWatchHandler,
+  Unstructured,
 } from './kube-api';
-import { relationPlugin } from './plugins/relation';
+import { IProviderPlugin } from './plugins/type';
 
 export function getObjectConstructor(resource: string, meta?: MetaQuery) {
   return meta?.resourceBasePath
@@ -42,7 +43,10 @@ export class GlobalStore {
   private cancelControllers = new Map<string, AbortController>();
   private _kubeApiTimeout?: false | number;
 
-  constructor(params: GlobalStoreInitParams) {
+  constructor(
+    params: GlobalStoreInitParams,
+    private plugins: IProviderPlugin[]
+  ) {
     this.init(params);
   }
 
@@ -69,16 +73,16 @@ export class GlobalStore {
         let resolved = false;
         kubeApi
           .listWatch({
-            onResponse: res => {
-              relationPlugin.processData(res);
+            onResponse: async res => {
+              const processedRes = await this.processListByPlugins(res);
               if (!resolved) {
-                resolve(res as unknown as T);
+                resolve(processedRes as unknown as T);
                 resolved = true;
               }
-              this.store.set(resource, res);
+              this.store.set(resource, processedRes);
             },
-            onEvent: event => {
-              relationPlugin.processItem(event.object);
+            onEvent: async event => {
+              await this.processItemByPlugins(event.object);
               this.notify(resource, event);
             },
             signal,
@@ -135,6 +139,23 @@ export class GlobalStore {
     this.prefix = prefix;
     this.fieldManager = fieldManager;
     this._kubeApiTimeout = kubeApiTimeout;
+    this.plugins.forEach(plugin => plugin.init(this));
+  }
+
+  private async processListByPlugins(list: UnstructuredList) {
+    let nextList = list;
+    for (const plugin of this.plugins) {
+      nextList = await plugin.processData(nextList);
+    }
+    return nextList;
+  }
+
+  private async processItemByPlugins(item: Unstructured) {
+    let nextItem = item;
+    for (const plugin of this.plugins) {
+      nextItem = await plugin.processItem(nextItem);
+    }
+    return nextItem;
   }
 
   destroy() {

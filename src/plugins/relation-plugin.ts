@@ -6,9 +6,11 @@ import {
   StatefulSet,
 } from 'kubernetes-types/apps/v1';
 import { Job } from 'kubernetes-types/batch/v1';
-import { Unstructured, UnstructuredList } from '../kube-api';
+import { ResourceModelList, Unstructured, UnstructuredList } from '../kube-api';
 import { Service } from 'kubernetes-types/core/v1';
 import { omit } from 'lodash';
+import { ResourceModel } from './model-plugin/model';
+import { GlobalStore } from '../global-store';
 
 export type Relation = {
   kind: string;
@@ -26,22 +28,33 @@ export type ExtendObjectMeta = ObjectMeta & {
 };
 
 class RelationPlugin {
-  processData(res: UnstructuredList): UnstructuredList {
-    const { kind, apiVersion } = res;
-    res.items = res.items.map(item =>
-      this.processItem({
-        ...item,
-        // TODO: unify this with data-provider getOne method
-        kind: kind.replace(/List$/g, ''),
-        apiVersion,
-      })
-    );
-    return res;
+  private globalStore?: GlobalStore;
+
+  init(globalStore: GlobalStore) {
+    this.globalStore = globalStore;
   }
 
-  processItem(item: Unstructured): Unstructured {
+  async processData(res: UnstructuredList) {
+    const { kind, apiVersion } = res;
+    const items = await Promise.all(
+      res.items.map(item =>
+        this.processItem({
+          ...item,
+          // TODO: unify this with data-provider getOne method
+          kind: kind.replace(/List$/g, ''),
+          apiVersion,
+        })
+      )
+    );
+    return {
+      ...res,
+      items,
+    } as ResourceModelList;
+  }
+
+  async processItem(item: Unstructured): Promise<ResourceModel> {
     this.processPodSelector(item);
-    return item;
+    return item as ResourceModel;
   }
 
   restoreData(res: UnstructuredList): UnstructuredList {
@@ -56,7 +69,7 @@ class RelationPlugin {
     };
   }
 
-  processPodSelector(item: Unstructured): Unstructured {
+  private processPodSelector(item: Unstructured): Unstructured {
     const { spec, kind } = item as
       | Deployment
       | DaemonSet
@@ -108,7 +121,7 @@ class RelationPlugin {
     return item;
   }
 
-  appendRelation(item: Unstructured, relation: Relation): Unstructured {
+  private appendRelation(item: Unstructured, relation: Relation): Unstructured {
     const metadata = item.metadata as ExtendObjectMeta;
     if (!metadata.relations) {
       metadata.relations = [];

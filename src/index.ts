@@ -7,5 +7,6 @@ export * from './utils';
 export * from './global-store';
 export * from './kube-api';
 
-export type { Relation, ExtendObjectMeta } from './plugins/relation';
-export { relationPlugin } from './plugins/relation';
+export type { Relation, ExtendObjectMeta } from './plugins/relation-plugin';
+export { ProviderPlugins } from './plugins';
+export * from './plugins/model-plugin/model';
