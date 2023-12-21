@@ -6,12 +6,12 @@ import { GlobalStore } from '../../../global-store';
 export class PodMetricsModel extends ResourceModel<PodMetrics> {
   public usage: ResourceQuantity;
 
-  constructor(public data: PodMetrics, public globalStore: GlobalStore) {
-    super(data, globalStore);
+  constructor(public _rawYaml: PodMetrics, public _globalStore: GlobalStore) {
+    super(_rawYaml, _globalStore);
 
     let cpuUsageNum = 0;
     let memoryUsageNum = 0;
-    for (const container of data.containers) {
+    for (const container of _rawYaml.containers) {
       cpuUsageNum += parseSi(container.usage.cpu || '0');
       memoryUsageNum += parseSi(container.usage.memory || '0');
     }

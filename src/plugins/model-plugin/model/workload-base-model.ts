@@ -19,18 +19,18 @@ export class WorkloadBaseModel<
   public spec?: T['spec'];
   public status?: T['status'];
 
-  constructor(public rawYaml: T, public globalStore: GlobalStore) {
-    super(rawYaml, globalStore);
+  constructor(public _rawYaml: T, public _globalStore: GlobalStore) {
+    super(_rawYaml, _globalStore);
   }
 
   get imageNames() {
     const containers =
       // cronjob
-      this.rawYaml.spec && 'jobTemplate' in this.rawYaml.spec
-        ? this.rawYaml.spec.jobTemplate.spec?.template.spec?.containers
+      this._rawYaml.spec && 'jobTemplate' in this._rawYaml.spec
+        ? this._rawYaml.spec.jobTemplate.spec?.template.spec?.containers
         : // other wokload
-        this.rawYaml.spec && 'template' in this.rawYaml.spec
-        ? this.rawYaml.spec?.template.spec?.containers
+        this._rawYaml.spec && 'template' in this._rawYaml.spec
+        ? this._rawYaml.spec?.template.spec?.containers
         : [];
 
     return (

@@ -6,13 +6,13 @@ import { GlobalStore } from '../../../global-store';
 type RequiredJob = Required<Job>;
 
 export class JobModel extends WorkloadBaseModel<RequiredJob> {
-  constructor(public rawYaml: RequiredJob, public globalStore: GlobalStore) {
-    super(rawYaml, globalStore);
+  constructor(public _rawYaml: RequiredJob, public _globalStore: GlobalStore) {
+    super(_rawYaml, _globalStore);
   }
 
   get duration() {
-    const completionTime = this.rawYaml.status?.completionTime;
-    const startTime = this.rawYaml.status?.startTime;
+    const completionTime = this._rawYaml.status?.completionTime;
+    const startTime = this._rawYaml.status?.startTime;
 
     if (!completionTime && startTime) {
       return getSecondsDiff(startTime, Date.now().toString());
@@ -29,8 +29,8 @@ export class JobModel extends WorkloadBaseModel<RequiredJob> {
     return elapsedTime(this.duration).label;
   }
   get completionsDisplay() {
-    return `${this.rawYaml.status?.succeeded || 0}/${
-      this.rawYaml.spec?.completions
+    return `${this._rawYaml.status?.succeeded || 0}/${
+      this._rawYaml.spec?.completions
     }`;
   }
 }

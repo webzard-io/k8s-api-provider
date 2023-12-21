@@ -6,7 +6,7 @@ import {
   StatefulSet,
 } from 'kubernetes-types/apps/v1';
 import { Job } from 'kubernetes-types/batch/v1';
-import { ResourceModelList, Unstructured, UnstructuredList } from '../kube-api';
+import { Unstructured, UnstructuredList } from '../kube-api';
 import { Service } from 'kubernetes-types/core/v1';
 import { omit } from 'lodash';
 import { ResourceModel } from './model-plugin/model';
@@ -49,7 +49,7 @@ class RelationPlugin {
     return {
       ...res,
       items,
-    } as ResourceModelList;
+    } as UnstructuredList;
   }
 
   async processItem(item: Unstructured): Promise<ResourceModel> {

@@ -15,8 +15,8 @@ export const TIMESTAMP_LABEL = 'sks.user.kubesmart.smtx.io/timestamp';
 
 export class WorkloadModel extends WorkloadBaseModel<WorkloadTypes> {
   public restarts = 0;
-  constructor(public rawYaml: WorkloadTypes, public globalStore: GlobalStore) {
-    super(rawYaml, globalStore);
+  constructor(public _rawYaml: WorkloadTypes, public _globalStore: GlobalStore) {
+    super(_rawYaml, _globalStore);
   }
 
   override async init() {
@@ -24,7 +24,7 @@ export class WorkloadModel extends WorkloadBaseModel<WorkloadTypes> {
   }
 
   private async getRestarts() {
-    const pods = await this.globalStore.get('pods', {
+    const pods = await this._globalStore.get('pods', {
       resourceBasePath: '/api/v1',
       kind: 'Pod',
     });
@@ -37,8 +37,8 @@ export class WorkloadModel extends WorkloadBaseModel<WorkloadTypes> {
     this.restarts = result;
   }
 
-  redeploy() {
-    const newOne = cloneDeep(this.rawYaml);
+  redeploy(): WorkloadTypes {
+    const newOne = cloneDeep(this._rawYaml);
     const path = 'spec.template.metadata.annotations';
     const annotations = get(newOne, path, {});
     set(newOne, path, {
@@ -48,8 +48,8 @@ export class WorkloadModel extends WorkloadBaseModel<WorkloadTypes> {
     return newOne;
   }
 
-  scale(value: number) {
-    const newOne = cloneDeep(this.rawYaml);
+  scale(value: number): WorkloadTypes {
+    const newOne = cloneDeep(this._rawYaml);
     if (newOne.kind === 'Deployment' || newOne.kind === 'StatefulSet') {
       set(newOne, 'spec.replicas', value);
     }

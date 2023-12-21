@@ -7,23 +7,23 @@ type RequiredCronJob = Required<CronJob>;
 
 export class CronJobModel extends WorkloadBaseModel<RequiredCronJob> {
   constructor(
-    public rawYaml: RequiredCronJob,
-    public globalStore: GlobalStore
+    public _rawYaml: RequiredCronJob,
+    public _globalStore: GlobalStore
   ) {
-    super(rawYaml, globalStore);
+    super(_rawYaml, _globalStore);
   }
 
   suspend() {
-    const newOne = cloneDeep(this.rawYaml);
-    if (this.rawYaml.kind === 'CronJob') {
+    const newOne = cloneDeep(this._rawYaml);
+    if (this._rawYaml.kind === 'CronJob') {
       set(newOne, 'spec.suspend', true);
     }
     return newOne;
   }
 
   resume() {
-    const newOne = cloneDeep(this.rawYaml);
-    if (this.rawYaml.kind === 'CronJob') {
+    const newOne = cloneDeep(this._rawYaml);
+    if (this._rawYaml.kind === 'CronJob') {
       set(newOne, 'spec.suspend', false);
     }
     return newOne;

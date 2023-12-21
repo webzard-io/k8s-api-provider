@@ -26,13 +26,6 @@ export type UnstructuredList = {
   items: Unstructured[];
 };
 
-export type ResourceModelList = {
-  apiVersion: string;
-  kind: string;
-  metadata: ListMeta;
-  items: Unstructured[];
-};
-
 export type Unstructured = {
   apiVersion: string;
   kind: string;

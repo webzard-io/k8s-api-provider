@@ -57,7 +57,7 @@ class ModelPlugin implements IProviderPlugin<ResourceModel> {
   }
 
   restoreItem(item: ResourceModel): Unstructured {
-    return item.rawYaml;
+    return item._rawYaml;
   }
 }
 

@@ -17,7 +17,6 @@ import { paginateData } from '../utils/paginate-data';
 import { GlobalStore } from '../global-store';
 import { transformHttpError } from '../utils/transform-http-error';
 import { ProviderPlugins } from '../plugins';
-import { genResourceId } from '../utils/gen-resource-id';
 
 function getApiVersion(resourceBasePath: string): string {
   return resourceBasePath.replace(/^(\/api\/)|(\/apis\/)/, '');
@@ -69,7 +68,6 @@ export const dataProvider = (
           items = sortData(sorters, items);
         }
         const _total = items.length;
-
         if (pagination) {
           items = paginateData(pagination, items);
         }
