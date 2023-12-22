@@ -28,14 +28,12 @@ class ModelPlugin implements IProviderPlugin<ResourceModel> {
   async processData(res: UnstructuredList) {
     const { kind, apiVersion } = res;
     const items = await Promise.all(
-      res.items.map(item =>
-        this.processItem({
-          ...item,
-          // TODO: unify this with data-provider getOne method
-          kind: kind.replace(/List$/g, ''),
-          apiVersion,
-        })
-      )
+      res.items.map(item => {
+        const newItem = { ...item };
+        newItem.kind = kind.replace(/List$/g, '');
+        newItem.apiVersion = apiVersion;
+        return this.processItem(newItem);
+      })
     );
     return {
       ...res,

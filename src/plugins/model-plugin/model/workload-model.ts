@@ -15,7 +15,10 @@ export const TIMESTAMP_LABEL = 'sks.user.kubesmart.smtx.io/timestamp';
 
 export class WorkloadModel extends WorkloadBaseModel<WorkloadTypes> {
   public restarts = 0;
-  constructor(public _rawYaml: WorkloadTypes, public _globalStore: GlobalStore) {
+  constructor(
+    public _rawYaml: WorkloadTypes,
+    public _globalStore: GlobalStore
+  ) {
     super(_rawYaml, _globalStore);
   }
 
