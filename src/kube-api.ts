@@ -27,6 +27,7 @@ export type UnstructuredList = {
 };
 
 export type Unstructured = {
+  id: string;
   apiVersion: string;
   kind: string;
   metadata: ObjectMeta;
@@ -670,7 +671,7 @@ export class KubeSdk {
   ) {
     const validSpecs = specs.filter(s => s && s.kind && s.metadata);
 
-    const restoredSpecs = await this.restoreItemsFromPlugins(validSpecs);
+    const restoredSpecs = this.restoreItemsFromPlugins(validSpecs);
 
     const changed: Unstructured[] = [];
     const created: Unstructured[] = [];
@@ -890,12 +891,12 @@ export class KubeSdk {
     return parts.join('/').toLowerCase();
   }
 
-  private async restoreItemsFromPlugins(items: Unstructured[]) {
+  private restoreItemsFromPlugins(items: Unstructured[]) {
     const result = [];
     for (const item of items) {
       let nextItem = item;
       for (const plugin of this.plugins) {
-        nextItem = await plugin.restoreItem(nextItem);
+        nextItem = plugin.restoreItem(nextItem);
       }
       result.push(nextItem);
     }

@@ -1,6 +1,5 @@
 import { GlobalStore } from '../../../global-store';
 import { Unstructured } from '../../../kube-api';
-import { genResourceId } from '../../../utils/gen-resource-id';
 
 export type IResourceModel = Unstructured & ResourceModel;
 
@@ -11,10 +10,10 @@ export class ResourceModel<T extends Unstructured = Unstructured> {
   public metadata!: T['metadata'];
 
   constructor(public _rawYaml: T, public _globalStore: GlobalStore) {
-    this.id = genResourceId(_rawYaml);
     Object.keys(_rawYaml).forEach(key => {
       Object.defineProperty(this, key, {
         value: _rawYaml[key as keyof T],
+        // should be readonly
         writable: true,
       });
     });

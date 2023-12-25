@@ -8,8 +8,10 @@ import { cloneDeep, get, set, sumBy } from 'lodash';
 import { GlobalStore } from '../../../global-store';
 import { PodModel } from './pod-model';
 import { matchSelector } from '../utils';
+import { Unstructured } from '../../../kube-api';
 
-type WorkloadTypes = Required<Deployment | StatefulSet | DaemonSet>;
+type WorkloadTypes = Required<Deployment | StatefulSet | DaemonSet> &
+  Unstructured;
 
 export const TIMESTAMP_LABEL = 'sks.user.kubesmart.smtx.io/timestamp';
 

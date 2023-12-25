@@ -8,13 +8,15 @@ import { Pod } from 'kubernetes-types/core/v1';
 import { shortenedImage } from '../../../utils/string';
 import { ResourceModel } from './resource-model';
 import { GlobalStore } from '../../../global-store';
+import { Unstructured } from '../../../kube-api';
 
 type WorkloadBaseTypes = Required<
   Deployment | StatefulSet | Job | DaemonSet | CronJob | Pod
->;
+> &
+  Unstructured;
 
 export class WorkloadBaseModel<
-  T extends WorkloadBaseTypes
+  T extends WorkloadBaseTypes = WorkloadBaseTypes
 > extends ResourceModel<T> {
   public spec?: T['spec'];
   public status?: T['status'];

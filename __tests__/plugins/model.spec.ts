@@ -18,7 +18,6 @@ describe('PodModel', () => {
     ]);
     expect(podModel.restartCount).toEqual(5);
     expect(podModel.readyDisplay).toEqual('1/1');
-    expect(podModel.id).toEqual('cert-manager/cert-manager-7d6d974dbf-drn4r');
     expect(podModel.name).toEqual('cert-manager-7d6d974dbf-drn4r');
     expect(podModel.spec!.restartPolicy).toEqual('Always');
     expect(podModel.metadata!.name).toEqual('cert-manager-7d6d974dbf-drn4r');

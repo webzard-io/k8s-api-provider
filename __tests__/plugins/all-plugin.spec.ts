@@ -14,7 +14,7 @@ describe('Test Plugins together', () => {
     return nextList;
   }
 
-  it('should reture deployment model', async () => {
+  it('should return deployment model', async () => {
     const result = await processListByPlugins(
       RawDeploymentList as UnstructuredList
     );
@@ -23,7 +23,7 @@ describe('Test Plugins together', () => {
     expect(deploymentModel.restarts).toEqual(5);
   });
 
-  it('should reture deployment model with relation', async () => {
+  it('should return deployment model with relation', async () => {
     const result = await processListByPlugins(
       RawDeploymentList as UnstructuredList
     );

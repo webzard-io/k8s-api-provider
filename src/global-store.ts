@@ -7,6 +7,7 @@ import {
   Unstructured,
 } from './kube-api';
 import { IProviderPlugin } from './plugins/type';
+import { genResourceId } from './utils/gen-resource-id';
 
 export function getObjectConstructor(resource: string, meta?: MetaQuery) {
   return meta?.resourceBasePath
@@ -74,7 +75,7 @@ export class GlobalStore {
         kubeApi
           .listWatch({
             onResponse: async res => {
-              const processedRes = await this.processListByPlugins(res);
+              const processedRes = await this.processList(res);
               if (!resolved) {
                 resolve(processedRes as unknown as T);
                 resolved = true;
@@ -82,7 +83,7 @@ export class GlobalStore {
               this.store.set(resource, processedRes);
             },
             onEvent: async event => {
-              await this.processItemByPlugins(event.object);
+              await this.processItem(event.object);
               this.notify(resource, event);
             },
             signal,
@@ -142,16 +143,20 @@ export class GlobalStore {
     this.plugins.forEach(plugin => plugin.init(this));
   }
 
-  private async processListByPlugins(list: UnstructuredList) {
+  private async processList(list: UnstructuredList) {
     let nextList = list;
+    nextList.items.forEach(item => {
+      item.id = genResourceId(item);
+    });
     for (const plugin of this.plugins) {
       nextList = await plugin.processData(nextList);
     }
     return nextList;
   }
 
-  private async processItemByPlugins(item: Unstructured) {
+  private async processItem(item: Unstructured) {
     let nextItem = item;
+    nextItem.id = genResourceId(item);
     for (const plugin of this.plugins) {
       nextItem = await plugin.processItem(nextItem);
     }
@@ -167,6 +172,7 @@ export class GlobalStore {
     this.stopWatchHandlers.clear();
     this.cancelControllers.clear();
   }
+
   cancelQueries(params?: CancelQueriesParams) {
     if (params?.queryKeys) {
       for (const queryKey of params.queryKeys) {

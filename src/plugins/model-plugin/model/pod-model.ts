@@ -4,8 +4,9 @@ import { formatSi, parseSi } from '../../../utils/unit';
 import { shortenedImage } from '../../../utils/string';
 import { WorkloadBaseModel } from './workload-base-model';
 import { GlobalStore } from '../../../global-store';
+import { Unstructured } from '../../../kube-api';
 
-type RequiredPod = Required<Pod>;
+type RequiredPod = Required<Pod> & Unstructured;
 export class PodModel extends WorkloadBaseModel<RequiredPod> {
   public request: ResourceQuantity;
   public limit: ResourceQuantity;

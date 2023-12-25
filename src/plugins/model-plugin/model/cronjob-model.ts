@@ -2,8 +2,9 @@ import { CronJob } from 'kubernetes-types/batch/v1';
 import { set, cloneDeep } from 'lodash';
 import { WorkloadBaseModel } from './workload-base-model';
 import { GlobalStore } from '../../../global-store';
+import { Unstructured } from '../../../kube-api';
 
-type RequiredCronJob = Required<CronJob>;
+type RequiredCronJob = Required<CronJob> & Unstructured;
 
 export class CronJobModel extends WorkloadBaseModel<RequiredCronJob> {
   constructor(

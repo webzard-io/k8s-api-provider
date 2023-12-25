@@ -12,9 +12,7 @@ export type DataList<Output extends Unstructured = Unstructured> = {
 export interface IProviderPlugin<Output = Unstructured> {
   _globalStore?: GlobalStore;
   init: (globalStore: GlobalStore) => void;
-  processData: (
-    res: UnstructuredList
-  ) => Promise<DataList<Unstructured & Output>>;
+  processData(res: UnstructuredList): Promise<DataList<Unstructured & Output>>;
   processItem: (item: Unstructured) => Promise<Unstructured & Output>;
   restoreData: (item: DataList<Unstructured & Output>) => UnstructuredList;
   restoreItem: (item: Unstructured & Output) => Unstructured;

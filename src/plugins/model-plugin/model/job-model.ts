@@ -2,8 +2,9 @@ import { Job } from 'kubernetes-types/batch/v1';
 import { elapsedTime, getSecondsDiff } from '../../../utils/time';
 import { WorkloadBaseModel } from './workload-base-model';
 import { GlobalStore } from '../../../global-store';
+import { Unstructured } from '../../../kube-api';
 
-type RequiredJob = Required<Job>;
+type RequiredJob = Required<Job> & Unstructured;
 
 export class JobModel extends WorkloadBaseModel<RequiredJob> {
   constructor(public _rawYaml: RequiredJob, public _globalStore: GlobalStore) {
