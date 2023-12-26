@@ -16,7 +16,6 @@ import { sortData } from '../utils/sort-data';
 import { paginateData } from '../utils/paginate-data';
 import { GlobalStore } from '../global-store';
 import { transformHttpError } from '../utils/transform-http-error';
-import { ProviderPlugins } from '../plugins';
 
 function getApiVersion(resourceBasePath: string): string {
   return resourceBasePath.replace(/^(\/api\/)|(\/apis\/)/, '');
@@ -119,7 +118,7 @@ export const dataProvider = (
           fieldManager: globalStore.fieldManager,
           kubeApiTimeout: globalStore.kubeApiTimeout,
         },
-        ProviderPlugins
+        globalStore.plugins
       );
       try {
         const data = await sdk.createyYaml([
@@ -151,7 +150,7 @@ export const dataProvider = (
             basePath: globalStore.apiUrl,
             fieldManager: globalStore.fieldManager,
           },
-          ProviderPlugins
+          globalStore.plugins
         );
         const params = [
           {
@@ -192,7 +191,7 @@ export const dataProvider = (
             fieldManager: globalStore.fieldManager,
             kubeApiTimeout: globalStore.kubeApiTimeout,
           },
-          ProviderPlugins
+          globalStore.plugins
         );
         const { data: current } = await getOne({ id, resource, meta, ...rest });
 

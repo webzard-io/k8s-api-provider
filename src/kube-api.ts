@@ -9,7 +9,7 @@ import type {
   Status,
 } from 'kubernetes-types/meta/v1';
 import mitt from 'mitt';
-import { IProviderPlugin } from './plugins/type';
+import { IProviderPlugin } from './plugin';
 
 export function informerLog(
   name: string,

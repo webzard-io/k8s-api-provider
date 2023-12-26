@@ -6,7 +6,7 @@ import {
   StopWatchHandler,
   Unstructured,
 } from './kube-api';
-import { IProviderPlugin } from './plugins/type';
+import { IProviderPlugin } from './plugin';
 import { genResourceId } from './utils/gen-resource-id';
 
 export function getObjectConstructor(resource: string, meta?: MetaQuery) {
@@ -46,7 +46,7 @@ export class GlobalStore {
 
   constructor(
     params: GlobalStoreInitParams,
-    private plugins: IProviderPlugin[]
+    public plugins: IProviderPlugin[]
   ) {
     this.init(params);
   }

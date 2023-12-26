@@ -1,6 +1,6 @@
 import { ListMeta } from 'kubernetes-types/meta/v1';
-import { Unstructured, UnstructuredList } from '../kube-api';
-import { GlobalStore } from '../global-store';
+import { Unstructured, UnstructuredList } from './kube-api';
+import { GlobalStore } from './global-store';
 
 export type DataList<Output extends Unstructured = Unstructured> = {
   apiVersion: string;
