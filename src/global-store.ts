@@ -163,6 +163,22 @@ export class GlobalStore {
     return nextItem;
   }
 
+  restoreItem(item: Unstructured): Unstructured {
+    let nextItem = item;
+    for (const plugin of this.plugins) {
+      nextItem = plugin.restoreItem(nextItem);
+    }
+    return nextItem;
+  }
+
+  restoreData(list: UnstructuredList): UnstructuredList {
+    let nextList = list;
+    for (const plugin of this.plugins) {
+      nextList = plugin.restoreData(nextList);
+    }
+    return nextList;
+  }
+
   destroy() {
     this.store.clear();
     this.subscribers.clear();

@@ -13,8 +13,6 @@ export class ResourceModel<T extends Unstructured = Unstructured> {
     Object.keys(_rawYaml).forEach(key => {
       Object.defineProperty(this, key, {
         value: _rawYaml[key as keyof T],
-        // should be readonly
-        writable: true,
       });
     });
   }

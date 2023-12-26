@@ -196,7 +196,9 @@ export const dataProvider = (
         );
         const { data: current } = await getOne({ id, resource, meta, ...rest });
 
-        const data = await sdk.deleteYaml([current as Unstructured]);
+        const rawYaml = globalStore.restoreItem(current as Unstructured);
+
+        const data = await sdk.deleteYaml([rawYaml as Unstructured]);
 
         return {
           data: data[0] as unknown as TData,
