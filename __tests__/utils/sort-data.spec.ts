@@ -20,7 +20,7 @@ describe('sortData function', () => {
     },
   ];
   it('should return origin data when sorting is empty array', () => {
-    const sorting = [];
+    const sorting: CrudSorting = [];
     const sortedData = sortData(sorting as CrudSorting, unstructuredData);
     const expectedSortedData = [
       {

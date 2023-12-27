@@ -9,7 +9,7 @@ import type {
   Status,
 } from 'kubernetes-types/meta/v1';
 import mitt from 'mitt';
-import { relationPlugin } from './plugins/relation';
+import { IProviderPlugin } from './plugin';
 
 export function informerLog(
   name: string,
@@ -27,6 +27,7 @@ export type UnstructuredList = {
 };
 
 export type Unstructured = {
+  id: string;
   apiVersion: string;
   kind: string;
   metadata: ObjectMeta;
@@ -625,7 +626,10 @@ export class KubeSdk {
   private apiVersionResourceCache: ApiVersionResourceCache;
   private kubeApiTimeout?: false | number;
 
-  constructor(protected options: KubeSdkOptions) {
+  constructor(
+    protected options: KubeSdkOptions,
+    private plugins: IProviderPlugin[]
+  ) {
     const { basePath, fieldManager, kubeApiTimeout } = options;
 
     this.options = options;
@@ -665,14 +669,15 @@ export class KubeSdk {
     strategy: string = 'application/apply-patch+yaml',
     replacePaths?: string[][]
   ) {
-    const validSpecs = specs
-      .filter(s => s && s.kind && s.metadata)
-      .map(spec => relationPlugin.restoreItem(spec));
+    const validSpecs = specs.filter(s => s && s.kind && s.metadata);
+
+    const restoredSpecs = this.restoreItemsFromPlugins(validSpecs);
+
     const changed: Unstructured[] = [];
     const created: Unstructured[] = [];
     const updated: Unstructured[] = [];
 
-    for (const index in validSpecs) {
+    for (const index in restoredSpecs) {
       const originSpec = validSpecs[index];
       const spec = cloneDeep(originSpec);
       spec.metadata.annotations = spec.metadata.annotations || {};
@@ -884,5 +889,17 @@ export class KubeSdk {
     }
 
     return parts.join('/').toLowerCase();
+  }
+
+  private restoreItemsFromPlugins(items: Unstructured[]) {
+    const result = [];
+    for (const item of items) {
+      let nextItem = item;
+      for (const plugin of this.plugins) {
+        nextItem = plugin.restoreItem(nextItem);
+      }
+      result.push(nextItem);
+    }
+    return result;
   }
 }

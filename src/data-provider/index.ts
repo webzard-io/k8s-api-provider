@@ -17,13 +17,6 @@ import { paginateData } from '../utils/paginate-data';
 import { GlobalStore } from '../global-store';
 import { transformHttpError } from '../utils/transform-http-error';
 
-export function getId(obj: Unstructured) {
-  if (!obj.metadata?.namespace) {
-    return obj.metadata?.name || '';
-  }
-  return `${obj.metadata?.namespace}/${obj.metadata?.name}`;
-}
-
 function getApiVersion(resourceBasePath: string): string {
   return resourceBasePath.replace(/^(\/api\/)|(\/apis\/)/, '');
 }
@@ -42,7 +35,7 @@ export const dataProvider = (
       const idParts = id.toString().split('/');
       const [namespace, name] =
         idParts.length === 1 ? [undefined, idParts[0]] : idParts;
-      const { items, kind, apiVersion } = await globalStore.get(resource, meta);
+      const { items } = await globalStore.get(resource, meta);
       const data = items.find(
         item =>
           item.metadata.name === name && item.metadata.namespace === namespace
@@ -51,12 +44,7 @@ export const dataProvider = (
         throw new Error(`resource: ${resource} not include id: ${id}`);
       }
       return {
-        data: {
-          ...data,
-          id: getId(data),
-          kind: kind.replace(/List$/g, ''),
-          apiVersion: apiVersion,
-        } as unknown as TData,
+        data: data as unknown as TData,
       };
     } catch (e) {
       const httpError = transformHttpError(e);
@@ -71,7 +59,6 @@ export const dataProvider = (
       try {
         const { resource, pagination, filters, sorters, meta } = params;
         let { items } = await globalStore.get<TData>(resource, meta);
-
         if (filters) {
           items = filterData(filters, items);
         }
@@ -80,16 +67,12 @@ export const dataProvider = (
           items = sortData(sorters, items);
         }
         const _total = items.length;
-
         if (pagination) {
           items = paginateData(pagination, items);
         }
 
         return {
-          data: items.map((item: Unstructured) => ({
-            ...item,
-            id: getId(item),
-          })),
+          data: items,
           total: _total,
         };
       } catch (e) {
@@ -100,7 +83,7 @@ export const dataProvider = (
 
     getMany: async <
       TData extends BaseRecord = BaseRecord,
-      TVariables = unknown,
+      TVariables = unknown
     >(params: {
       resource: string;
       ids: BaseKey[];
@@ -129,11 +112,14 @@ export const dataProvider = (
     }: Parameters<DataProvider['create']>['0']): Promise<
       CreateResponse<TData>
     > => {
-      const sdk = new KubeSdk({
-        basePath: globalStore.apiUrl,
-        fieldManager: globalStore.fieldManager,
-        kubeApiTimeout: globalStore.kubeApiTimeout,
-      });
+      const sdk = new KubeSdk(
+        {
+          basePath: globalStore.apiUrl,
+          fieldManager: globalStore.fieldManager,
+          kubeApiTimeout: globalStore.kubeApiTimeout,
+        },
+        globalStore.plugins
+      );
       try {
         const data = await sdk.createyYaml([
           {
@@ -159,10 +145,13 @@ export const dataProvider = (
       UpdateResponse<TData>
     > => {
       try {
-        const sdk = new KubeSdk({
-          basePath: globalStore.apiUrl,
-          fieldManager: globalStore.fieldManager,
-        });
+        const sdk = new KubeSdk(
+          {
+            basePath: globalStore.apiUrl,
+            fieldManager: globalStore.fieldManager,
+          },
+          globalStore.plugins
+        );
         const params = [
           {
             ...(variables as unknown as Unstructured),
@@ -196,14 +185,19 @@ export const dataProvider = (
       DeleteOneResponse<TData>
     > => {
       try {
-        const sdk = new KubeSdk({
-          basePath: globalStore.apiUrl,
-          fieldManager: globalStore.fieldManager,
-          kubeApiTimeout: globalStore.kubeApiTimeout,
-        });
+        const sdk = new KubeSdk(
+          {
+            basePath: globalStore.apiUrl,
+            fieldManager: globalStore.fieldManager,
+            kubeApiTimeout: globalStore.kubeApiTimeout,
+          },
+          globalStore.plugins
+        );
         const { data: current } = await getOne({ id, resource, meta, ...rest });
 
-        const data = await sdk.deleteYaml([current as Unstructured]);
+        const rawYaml = globalStore.restoreItem(current as Unstructured);
+
+        const data = await sdk.deleteYaml([rawYaml as Unstructured]);
 
         return {
           data: data[0] as unknown as TData,

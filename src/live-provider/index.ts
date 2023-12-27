@@ -1,8 +1,8 @@
 import { LiveEvent, LiveProvider } from '@refinedev/core';
 import { StopWatchHandler, WatchEvent, Unstructured } from '../kube-api';
-import { getId } from '../data-provider';
 
 import { GlobalStore } from '../global-store';
+import { genResourceId } from '../utils/gen-resource-id';
 
 const eventTypeMap: Record<WatchEvent['type'], LiveEvent['type']> = {
   ADDED: 'created',
@@ -43,7 +43,7 @@ export const liveProvider = (
       );
     }
     const stop = selectedGlobalStore.subscribe(resource, event => {
-      const id = getId(event.object);
+      const id = genResourceId(event.object);
       callback({
         channel,
         type: eventTypeMap[event.type] || event.type,
