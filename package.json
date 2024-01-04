@@ -1,6 +1,6 @@
 {
   "name": "k8s-api-provider",
-  "version": "0.0.14",
+  "version": "0.0.15-beta.0",
   "description": "K8s ui data provider",
   "main": "lib/index.js",
   "module": "lib/index.js",
