@@ -165,7 +165,8 @@ export class GlobalStore {
 
   restoreItem(item: Unstructured): Unstructured {
     let nextItem = item;
-    for (const plugin of this.plugins) {
+    // restore in reversed order
+    for (const plugin of [...this.plugins].reverse()) {
       nextItem = plugin.restoreItem(nextItem);
     }
     return nextItem;
@@ -173,7 +174,8 @@ export class GlobalStore {
 
   restoreData(list: UnstructuredList): UnstructuredList {
     let nextList = list;
-    for (const plugin of this.plugins) {
+    // restore in reversed order
+    for (const plugin of [...this.plugins].reverse()) {
       nextList = plugin.restoreData(nextList);
     }
     return nextList;
