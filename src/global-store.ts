@@ -1,4 +1,5 @@
 import { MetaQuery } from '@refinedev/core';
+import { isEqual } from 'lodash';
 import {
   KubeApi,
   UnstructuredList,
@@ -39,6 +40,11 @@ export class GlobalStore {
   fieldManager?: string;
 
   private store = new Map<string, UnstructuredList>();
+  private requestsCache: Array<{
+    resource: string;
+    meta?: MetaQuery;
+    promise: Promise<unknown>;
+  }> = [];
   private subscribers = new Map<string, ((data: WatchEvent) => void)[]>();
   private stopWatchHandlers = new Map<string, StopWatchHandler>();
   private cancelControllers = new Map<string, AbortController>();
@@ -60,42 +66,71 @@ export class GlobalStore {
   }
 
   get<T = UnstructuredList>(resource: string, meta?: MetaQuery): Promise<T> {
-    return new Promise((resolve, reject) => {
-      if (!this.store.has(resource)) {
-        const kubeApi = new KubeApi({
-          basePath: this._apiUrl,
-          watchWsBasePath: this.watchWsApiUrl,
-          objectConstructor: getObjectConstructor(resource, meta),
-          kubeApiTimeout: this.kubeApiTimeout,
-        });
-        const controller = new AbortController();
-        const { signal } = controller;
-        this.cancelControllers.set(resource, controller);
-        let resolved = false;
-        kubeApi
-          .listWatch({
-            onResponse: async res => {
-              const processedRes = await this.processList(res);
-              if (!resolved) {
-                resolve(processedRes as unknown as T);
-                resolved = true;
-              }
-              this.store.set(resource, processedRes);
-            },
-            onEvent: async event => {
-              await this.processItem(event.object);
-              this.notify(resource, event);
-            },
-            signal,
-          })
-          .then(stop => {
-            this.stopWatchHandlers.set(resource, stop);
-          })
-          .catch(e => reject(e));
-      } else {
+    if (this.store.has(resource)) {
+      // return cached data
+      return new Promise(resolve => {
         resolve(this.store.get(resource)! as unknown as T);
-      }
+      });
+    }
+
+    const cacheRequest = this.requestsCache.find(f => {
+      return f.resource === resource && isEqual(f.meta, meta);
     });
+
+    // return cached fetching request
+    if (cacheRequest) {
+      return cacheRequest.promise as Promise<T>;
+    }
+
+    const promise = new Promise<T>((resolve, reject) => {
+      const kubeApi = new KubeApi({
+        basePath: this._apiUrl,
+        watchWsBasePath: this.watchWsApiUrl,
+        objectConstructor: getObjectConstructor(resource, meta),
+        kubeApiTimeout: this.kubeApiTimeout,
+      });
+      const controller = new AbortController();
+      const { signal } = controller;
+      this.cancelControllers.set(resource, controller);
+      let resolved = false;
+      kubeApi
+        .listWatch({
+          onResponse: async res => {
+            const processedRes = await this.processList(res);
+            if (!resolved) {
+              resolve(processedRes as unknown as T);
+              resolved = true;
+            }
+            this.store.set(resource, processedRes);
+          },
+          onEvent: async event => {
+            await this.processItem(event.object);
+            this.notify(resource, event);
+          },
+          signal,
+        })
+        .then(stop => {
+          this.stopWatchHandlers.set(resource, stop);
+        })
+        .catch(e => reject(e))
+        .finally(() => {
+          // clear cache request
+          const cacheRequestIndex = this.requestsCache.findIndex(f => {
+            return f.promise === promise;
+          });
+          if (cacheRequestIndex > -1) {
+            this.requestsCache.splice(cacheRequestIndex, 1);
+          }
+        });
+    });
+
+    // cache the promise
+    this.requestsCache.push({
+      resource,
+      meta,
+      promise,
+    });
+    return promise;
   }
 
   subscribe(resource: string, onEvent: (data: WatchEvent) => void) {
