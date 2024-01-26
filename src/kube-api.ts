@@ -28,8 +28,8 @@ export type UnstructuredList = {
 
 export type Unstructured = {
   id: string;
-  apiVersion: string;
-  kind: string;
+  apiVersion?: string;
+  kind?: string;
   metadata: ObjectMeta;
 };
 
