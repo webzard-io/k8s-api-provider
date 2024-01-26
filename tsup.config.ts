@@ -9,7 +9,6 @@ export default defineConfig(options => ({
   sourcemap: true,
   clean: !options.watch,
   metafile: !options.watch,
-  minify: !options.watch,
   platform: 'browser',
   outDir: 'lib',
 }));
