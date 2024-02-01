@@ -1,5 +1,4 @@
 import { MetaQuery } from '@refinedev/core';
-import { isEqual } from 'lodash';
 import {
   KubeApi,
   UnstructuredList,
@@ -74,7 +73,11 @@ export class GlobalStore {
     }
 
     const cacheRequest = this.requestsCache.find(f => {
-      return f.resource === resource && isEqual(f.meta, meta);
+      // TODO: Its supposed to be strictly comparison of query path
+      return (
+        f.resource === resource &&
+        f.meta?.resourceBasePath === meta?.resourceBasePath
+      );
     });
 
     // return cached fetching request
