@@ -59,6 +59,11 @@ export const dataProvider = (
       try {
         const { resource, pagination, filters, sorters, meta } = params;
         let { items } = await globalStore.get<TData>(resource, meta);
+
+        if (meta?.namespace) {
+          items = items.filter((item: Unstructured) => item.metadata.namespace === meta.namespace);
+        }
+
         if (filters) {
           items = filterData(filters, items);
         }
@@ -66,6 +71,7 @@ export const dataProvider = (
         if (sorters) {
           items = sortData(sorters, items);
         }
+
         const _total = items.length;
         if (pagination) {
           items = paginateData(pagination, items);

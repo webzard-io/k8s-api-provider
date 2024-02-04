@@ -15,7 +15,6 @@ export function getObjectConstructor(resource: string, meta?: MetaQuery) {
     ? {
         resourceBasePath: meta?.resourceBasePath,
         resource: meta?.k8sResource || resource,
-        namespace: meta.namespace,
       }
     : {
         resourceBasePath: '/api/v1',
