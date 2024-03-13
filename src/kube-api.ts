@@ -695,7 +695,6 @@ export class KubeSdk {
     const restoredSpecs = this.restoreItemsFromPlugins(validSpecs);
 
     const changed: Unstructured[] = [];
-    const created: Unstructured[] = [];
     const updated: Unstructured[] = [];
 
     for (const index in restoredSpecs) {
@@ -709,36 +708,11 @@ export class KubeSdk {
         delete (spec as any).metadata.resourceVersion;
       }
 
-      let exist = true;
-      try {
-        await this.read(spec);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (e: any) {
-        if (e.response?.status === 404) {
-          exist = false;
-        } else {
-          throw e;
-        }
-      }
+      const response = await this.patch(spec, strategy, replacePaths?.[index]);
 
-      const response = exist
-        ? await this.patch(spec, strategy, replacePaths?.[index])
-        : await this.create(spec);
+      updated.push(response as Unstructured);
 
-      if (exist) {
-        updated.push(response as Unstructured);
-      } else {
-        created.push(response as Unstructured);
-      }
       changed.push(response as Unstructured);
-    }
-
-    if (created.length) {
-      event.emit('change', {
-        type: 'ADDED',
-        basePath: this.basePath,
-        items: created,
-      });
     }
 
     if (updated.length) {
