@@ -65,7 +65,7 @@ type KubeApiListOptions = {
 };
 
 type KubeApiListWatchOptions<T> = KubeApiListOptions & {
-  onResponse?: (response: T) => void;
+  onResponse?: (response: T, event?: WatchEvent) => void;
   onEvent?: (event: WatchEvent) => void;
   signal?: AbortSignal;
 };
@@ -379,10 +379,13 @@ export class KubeApi<T extends UnstructuredList> {
           break;
         default:
       }
-      onResponse?.({
-        ...response,
-        items,
-      });
+      onResponse?.(
+        {
+          ...response,
+          items,
+        },
+        event
+      );
       onEvent?.(event);
     };
 
