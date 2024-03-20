@@ -97,17 +97,18 @@ export class GlobalStore {
       let resolved = false;
       kubeApi
         .listWatch({
-          onResponse: async res => {
+          onResponse: async (res, event) => {
             const processedRes = await this.processList(res);
             if (!resolved) {
               resolve(processedRes as unknown as T);
               resolved = true;
             }
             this.store.set(resource, processedRes);
-          },
-          onEvent: async event => {
-            await this.processItem(event.object);
-            this.notify(resource, event);
+
+            if (event) {
+              await this.processItem(event.object);
+              this.notify(resource, event);
+            }
           },
           signal,
         })
