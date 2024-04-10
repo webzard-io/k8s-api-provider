@@ -833,6 +833,14 @@ export class KubeSdk {
       .delete(url, {
         timeout: this.kubeApiTimeout,
         retry: 0,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          kind: 'DeleteOptions',
+          apiVersion: 'batch/v1',
+          propagationPolicy: 'Background',
+        }),
       })
       .json();
 
