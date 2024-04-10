@@ -2,8 +2,14 @@ import { CrudFilter, CrudFilters, CrudOperators } from '@refinedev/core';
 import _ from 'lodash';
 import { Unstructured } from '../kube-api';
 
-function deepFilter(item: Unstructured, filter: CrudFilter): boolean {
-  if ('field' in filter) {
+type Filter = CrudFilter & {
+  fn?: (item: Unstructured) => boolean;
+}
+
+function deepFilter(item: Unstructured, filter: Filter): boolean {
+  if (filter.fn) {
+    return filter.fn(item);
+  } else if ('field' in filter) {
     // Logical filter
     const { field, operator, value } = filter;
     return evaluateFilter(item, field, operator, value);
