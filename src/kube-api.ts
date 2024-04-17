@@ -478,6 +478,7 @@ export class KubeApi<T extends UnstructuredList> {
         socket.close(3001, 'KUBEAPI_MANUAL_CLOSE');
         return;
       }
+      this.resetRetryState();
       heartbeat(socket);
       removeAbortListener();
     });
