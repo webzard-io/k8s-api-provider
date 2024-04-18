@@ -68,6 +68,7 @@ type KubeApiListWatchOptions<T> = KubeApiListOptions & {
   onResponse?: (response: T, event?: WatchEvent) => void;
   onEvent?: (event: WatchEvent) => void;
   signal?: AbortSignal;
+  retryFlag?: boolean;
 };
 
 type KubeApiLinkRef = {
@@ -284,17 +285,39 @@ export class KubeApi<T extends UnstructuredList> {
     onResponse,
     onEvent,
     signal,
+    retryFlag = false,
   }: KubeApiListWatchOptions<T> = {}): Promise<StopWatchHandler> {
     const url = this.getUrl({ namespace });
     const watchUrl = this.watchWsBasePath
       ? this.getUrl({ namespace }, undefined, true)
       : url;
-
+    let stop = () => {};
     const response = await this.list({
       namespace,
       query,
       fetchOptions: { timeout: this.kubeApiTimeout, signal },
+    }).catch(error => {
+      if (retryFlag) {
+        this.retryFunc(async () => {
+          stop = await this.listWatch({
+            namespace,
+            query,
+            onResponse,
+            onEvent,
+            retryFlag: true,
+          });
+        });
+
+        stop = () => {
+          this.resetRetryState();
+        };
+      } else {
+        throw error;
+      }
     });
+    if (!response) {
+      return stop;
+    }
     const stopWatch = await this.watch(
       watchUrl,
       response,
@@ -305,10 +328,11 @@ export class KubeApi<T extends UnstructuredList> {
         query,
         onResponse,
         onEvent,
+        retryFlag: true,
       }),
       signal
     );
-    const stop = () => {
+    stop = () => {
       stopWatch?.();
     };
     onResponse?.(response);
@@ -481,6 +505,7 @@ export class KubeApi<T extends UnstructuredList> {
         socket.close(3001, 'KUBEAPI_MANUAL_CLOSE');
         return;
       }
+      this.resetRetryState();
       heartbeat(socket);
       removeAbortListener();
     });
@@ -501,7 +526,7 @@ export class KubeApi<T extends UnstructuredList> {
       });
 
       stopWatch = () => {
-        clearTimeout(this.retryTimer);
+        this.resetRetryState();
       };
     });
 
