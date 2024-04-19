@@ -716,7 +716,8 @@ export class KubeSdk {
   public async applyYaml(
     specs: Unstructured[],
     strategy: string = 'application/apply-patch+yaml',
-    replacePaths?: string[][]
+    replacePaths?: string[][],
+    updateType: 'patch' | 'put' = 'patch'
   ) {
     const validSpecs = specs.filter(s => s && s.kind && s.metadata);
 
@@ -736,7 +737,10 @@ export class KubeSdk {
         delete (spec as any).metadata.resourceVersion;
       }
 
-      const response = await this.patch(spec, strategy, replacePaths?.[index]);
+      const response =
+        updateType === 'patch'
+          ? await this.patch(spec, strategy, replacePaths?.[index])
+          : await this.put(spec);
 
       updated.push(response as Unstructured);
 
@@ -815,7 +819,7 @@ export class KubeSdk {
         ? (replacePaths || []).map(path => ({
             op: 'replace',
             path: '/' + path.split('.').join('/'),
-            value: get(spec, path),
+            value: path ? get(spec, path) : spec,
           }))
         : spec;
     const res = await ky
