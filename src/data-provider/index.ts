@@ -168,7 +168,8 @@ export const dataProvider = (
         const data = await sdk.applyYaml(
           params,
           meta?.strategy,
-          meta?.replacePaths
+          meta?.replacePaths,
+          meta?.updateType
         );
 
         return {
