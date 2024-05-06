@@ -27,6 +27,7 @@ export interface GlobalStoreInitParams {
   prefix?: string;
   fieldManager?: string;
   kubeApiTimeout?: false | number;
+  plugins?: IProviderPlugin[];
 }
 export interface CancelQueriesParams {
   queryKeys?: string[];
@@ -167,8 +168,14 @@ export class GlobalStore {
 
   init(params: GlobalStoreInitParams) {
     this.destroy();
-    const { apiUrl, watchWsApiUrl, prefix, fieldManager, kubeApiTimeout } =
-      params;
+    const {
+      apiUrl,
+      watchWsApiUrl,
+      prefix,
+      fieldManager,
+      kubeApiTimeout,
+      plugins,
+    } = params;
     this.store = new Map();
     this.subscribers = new Map();
     this.stopWatchHandlers = new Map();
@@ -178,9 +185,15 @@ export class GlobalStore {
     this.prefix = prefix;
     this.fieldManager = fieldManager;
     this._kubeApiTimeout = kubeApiTimeout;
-    this.plugins.forEach(plugin => plugin.init(this));
+    this.loadPlugins(plugins);
   }
-
+  loadPlugins(plugins?: IProviderPlugin[]) {
+    if (plugins) {
+      this.destroy();
+      this.plugins = plugins;
+      this.plugins.forEach(plugin => plugin.init(this));
+    }
+  }
   private async processList(list: UnstructuredList) {
     let nextList = list;
     nextList.items.forEach(item => {
