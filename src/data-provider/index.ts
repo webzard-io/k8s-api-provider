@@ -38,7 +38,7 @@ export const dataProvider = (
       const { items } = await globalStore.get(resource, meta);
       const data = items.find(
         item =>
-          item.metadata.name === name && item.metadata.namespace === namespace
+          item.metadata?.name === name && item.metadata.namespace === namespace
       );
       if (!data) {
         throw new Error(`resource: ${resource} not include id: ${id}`);
@@ -61,7 +61,7 @@ export const dataProvider = (
         let { items } = await globalStore.get<TData>(resource, meta);
 
         if (meta?.namespace) {
-          items = items.filter((item: Unstructured) => item.metadata.namespace === meta.namespace);
+          items = items.filter((item: Unstructured) => item.metadata?.namespace === meta.namespace);
         }
 
         if (filters) {
