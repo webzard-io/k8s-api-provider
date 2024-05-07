@@ -30,7 +30,7 @@ export type Unstructured = {
   id: string;
   apiVersion?: string;
   kind?: string;
-  metadata: ObjectMeta;
+  metadata?: ObjectMeta;
 };
 
 type KubeApiQueryParams = {
@@ -359,8 +359,8 @@ export class KubeApi<T extends UnstructuredList> {
 
       informerLog('INFORMER', event);
 
-      const name = event.object.metadata.name;
-      const namespace = event.object.metadata.namespace;
+      const name = event.object.metadata?.name;
+      const namespace = event.object.metadata?.namespace;
 
       switch (event.type) {
         case 'ADDED': {
@@ -370,8 +370,8 @@ export class KubeApi<T extends UnstructuredList> {
           items = items
             .map(item => {
               if (
-                item.metadata.name === name &&
-                item.metadata.namespace === namespace
+                item.metadata?.name === name &&
+                item.metadata?.namespace === namespace
               ) {
                 exist = true;
                 return event.object;
@@ -386,8 +386,8 @@ export class KubeApi<T extends UnstructuredList> {
         case 'MODIFIED':
           items = items.map(item => {
             if (
-              item.metadata.name === name &&
-              item.metadata.namespace === namespace
+              item.metadata?.name === name &&
+              item.metadata?.namespace === namespace
             ) {
               return event.object;
             }
@@ -397,8 +397,8 @@ export class KubeApi<T extends UnstructuredList> {
         case 'DELETED':
           items = items.filter(
             item =>
-              item.metadata.name !== name ||
-              item.metadata.namespace !== namespace
+              item.metadata?.name !== name ||
+              item.metadata?.namespace !== namespace
           );
           break;
         default:
@@ -695,6 +695,7 @@ export class KubeSdk {
     for (const index in validSpecs) {
       const originSpec = validSpecs[index];
       const spec = cloneDeep(originSpec);
+      spec.metadata = spec.metadata || {};
       spec.metadata.annotations = spec.metadata.annotations || {};
 
       const response = await this.create(spec);
@@ -729,10 +730,11 @@ export class KubeSdk {
     for (const index in restoredSpecs) {
       const originSpec = validSpecs[index];
       const spec = cloneDeep(originSpec);
+      spec.metadata = spec.metadata || {};
       spec.metadata.annotations = spec.metadata.annotations || {};
 
       if (strategy === 'application/apply-patch+yaml') {
-        delete spec.metadata.managedFields;
+        delete spec.metadata?.managedFields;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         delete (spec as any).metadata.resourceVersion;
       }
