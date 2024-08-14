@@ -804,6 +804,9 @@ export class KubeSdk {
         retry: 0,
         timeout: this.kubeApiTimeout,
         json: spec,
+        searchParams: {
+          fieldManager: this.fieldManager || 'refine',
+        },
       })
       .json();
 
@@ -832,13 +835,10 @@ export class KubeSdk {
         timeout: this.kubeApiTimeout,
         retry: 0,
         json,
-        searchParams:
-          strategy === 'application/apply-patch+yaml'
-            ? {
-                fieldManager: this.fieldManager || 'refine',
-                force: true,
-              }
-            : undefined,
+        searchParams: {
+          fieldManager: this.fieldManager || 'refine',
+          ...(strategy === 'application/apply-patch+yaml' && { force: true }),
+        },
       })
       .json();
 
@@ -852,6 +852,9 @@ export class KubeSdk {
         retry: 0,
         timeout: this.kubeApiTimeout,
         json: spec,
+        searchParams: {
+          fieldManager: this.fieldManager || 'refine',
+        },
       })
       .json();
 
