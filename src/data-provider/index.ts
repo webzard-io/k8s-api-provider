@@ -155,6 +155,7 @@ export const dataProvider = (
           {
             basePath: globalStore.apiUrl,
             fieldManager: globalStore.fieldManager,
+            kubeApiTimeout: globalStore.kubeApiTimeout,
           },
           globalStore.plugins
         );
