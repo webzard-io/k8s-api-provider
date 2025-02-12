@@ -352,7 +352,7 @@ export class KubeApi<T extends UnstructuredList> {
     let { items } = response as unknown as UnstructuredList;
     const stops: Array<() => void> = [];
 
-    const handleEvent = (event: Readonly<WatchEvent>) => {
+    const handleEvent = (event: Readonly<WatchEvent>, isBySdk?: boolean) => {
       if (event.type === 'PING') {
         return;
       }
@@ -362,11 +362,11 @@ export class KubeApi<T extends UnstructuredList> {
       const name = event.object.metadata?.name;
       const namespace = event.object.metadata?.namespace;
 
+      // maybe already added by sdk event
+      let exist = false;
+
       switch (event.type) {
         case 'ADDED': {
-          // maybe already added by sdk event
-          let exist = false;
-
           items = items
             .map(item => {
               if (
@@ -403,14 +403,18 @@ export class KubeApi<T extends UnstructuredList> {
           break;
         default:
       }
-      onResponse?.(
-        {
-          ...response,
-          items,
-        },
-        event
-      );
-      onEvent?.(event);
+
+      if (!(exist && isBySdk)) {
+        // don't trigger the callback for same resource object when the event is triggered by sdk
+        onResponse?.(
+          {
+            ...response,
+            items,
+          },
+          event
+        );
+        onEvent?.(event);
+      }
     };
 
     // client-side watch simulated by applyYaml
@@ -439,7 +443,10 @@ export class KubeApi<T extends UnstructuredList> {
     };
   }
 
-  private watchBySdk(response: T, handleEvent: (event: WatchEvent) => void) {
+  private watchBySdk(
+    response: T,
+    handleEvent: (event: WatchEvent, isBySdk: true) => void
+  ) {
     const onChange = (params: KubeAPIEvent['change']) => {
       const { type, basePath, items } = params;
 
@@ -450,7 +457,7 @@ export class KubeApi<T extends UnstructuredList> {
           object.apiVersion === response.apiVersion &&
           object.kind === response.kind.replace(/List$/g, '')
         ) {
-          handleEvent({ type, object });
+          handleEvent({ type, object }, true);
         }
       });
     };
