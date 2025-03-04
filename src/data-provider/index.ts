@@ -14,6 +14,7 @@ import { KubeSdk, Unstructured } from '../kube-api';
 import { filterData } from '../utils/filter-data';
 import { sortData } from '../utils/sort-data';
 import { paginateData } from '../utils/paginate-data';
+import {extractPath} from '../utils/extract-path';
 import { GlobalStore } from '../global-store';
 import { transformHttpError } from '../utils/transform-http-error';
 
@@ -35,11 +36,17 @@ export const dataProvider = (
       const idParts = id.toString().split('/');
       const [namespace, name] =
         idParts.length === 1 ? [undefined, idParts[0]] : idParts;
-      const { items } = await globalStore.get(resource, meta);
+      let { items } = await globalStore.get(resource, meta);
+
+      if (meta?.extractPathName) {
+        items = extractPath(meta.extractPathName, items);
+      }
+
       const data = items.find(
         item =>
           item.metadata?.name === name && item.metadata.namespace === namespace
       );
+
       if (!data) {
         throw new Error(`resource: ${resource} not include id: ${id}`);
       }
@@ -62,6 +69,10 @@ export const dataProvider = (
 
         if (meta?.namespace) {
           items = items.filter((item: Unstructured) => item.metadata?.namespace === meta.namespace);
+        }
+
+        if (meta?.extractPathName) {
+          items = extractPath(meta.extractPathName, items);
         }
 
         if (filters) {
