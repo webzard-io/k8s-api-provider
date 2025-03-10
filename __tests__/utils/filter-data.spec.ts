@@ -5,16 +5,19 @@ import { Unstructured } from '../../lib';
 describe('filterData function', () => {
   const unstructuredData = [
     {
+      id: '1',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod A', namespace: 'Namespace A' },
     },
     {
+      id: '2',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod B', namespace: 'Namespace B' },
     },
     {
+      id: '3',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod C', namespace: 'Namespace A' },
@@ -28,11 +31,13 @@ describe('filterData function', () => {
     const filteredData = filterData(filters as CrudFilters, unstructuredData);
     const expectedFilteredData = [
       {
+        id: '1',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod A', namespace: 'Namespace A' },
       },
       {
+        id: '3',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod C', namespace: 'Namespace A' },
@@ -54,11 +59,13 @@ describe('filterData function', () => {
     const filteredData = filterData(filters as CrudFilters, unstructuredData);
     const expectedFilteredData = [
       {
+        id: '1',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod A', namespace: 'Namespace A' },
       },
       {
+        id: '2',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod B', namespace: 'Namespace B' },
@@ -80,6 +87,7 @@ describe('filterData function', () => {
     const filteredData = filterData(filters as CrudFilters, unstructuredData);
     const expectedFilteredData = [
       {
+        id: '1',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod A', namespace: 'Namespace A' },
@@ -118,6 +126,7 @@ describe('filterData function', () => {
     ];
     const data: (Unstructured & { status: { state: string; } })[] = [
       {
+        id: '1',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod A', namespace: 'Namespace A' },
@@ -126,6 +135,7 @@ describe('filterData function', () => {
         },
       },
       {
+        id: '2',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod B', namespace: 'Namespace B' },
@@ -134,6 +144,7 @@ describe('filterData function', () => {
         },
       },
       {
+        id: '3',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod C', namespace: 'Namespace A', deletionTimestamp: 'mock time' },
@@ -151,6 +162,7 @@ describe('filterData function', () => {
         ],
       },
     ], data)).toEqual([{
+      id: '1',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod A', namespace: 'Namespace A' },
@@ -167,6 +179,7 @@ describe('filterData function', () => {
         ],
       },
     ], data)).toEqual([{
+      id: '2',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod B', namespace: 'Namespace B' },
@@ -183,6 +196,7 @@ describe('filterData function', () => {
         ],
       },
     ], data)).toEqual([{
+      id: '3',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod C', namespace: 'Namespace A', deletionTimestamp: 'mock time' },
@@ -209,6 +223,7 @@ describe('filterData function', () => {
 
 describe('evaluateFilter function', () => {
   const mockItem = {
+    id: '1',
     apiVersion: 'v1',
     kind: 'Pod',
     metadata: {

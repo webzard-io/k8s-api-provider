@@ -1,6 +1,6 @@
 // highly inspired by https://github.com/lensapp/lens/blob/1a29759bff/src/common/k8s-api/kube-api.ts
 import ky, { SearchParamsOption, Options } from 'ky';
-import { get, cloneDeep } from 'lodash';
+import { get, cloneDeep } from 'lodash-es';
 import type {
   APIResource,
   APIResourceList,

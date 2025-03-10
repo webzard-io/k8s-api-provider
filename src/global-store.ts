@@ -26,6 +26,7 @@ export type KubeApiFactory = (params: {
   watchWsBasePath?: string;
   objectConstructor: ReturnType<typeof getObjectConstructor>;
   kubeApiTimeout?: false | number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }) => KubeApi<any>;
 
 export interface GlobalStoreInitParams {
