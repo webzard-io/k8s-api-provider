@@ -21,6 +21,13 @@ export function getObjectConstructor(resource: string, meta?: MetaQuery) {
       };
 }
 
+export type KubeApiFactory = (params: {
+  basePath: string;
+  watchWsBasePath?: string;
+  objectConstructor: ReturnType<typeof getObjectConstructor>;
+  kubeApiTimeout?: false | number;
+}) => KubeApi<any>;
+
 export interface GlobalStoreInitParams {
   apiUrl: string;
   watchWsApiUrl?: string;
@@ -28,9 +35,16 @@ export interface GlobalStoreInitParams {
   fieldManager?: string;
   kubeApiTimeout?: false | number;
   plugins?: IProviderPlugin[];
+  kubeApiFactory?: KubeApiFactory;
 }
 export interface CancelQueriesParams {
   queryKeys?: string[];
+}
+export class GlobalStoreDestroyedError extends Error {
+  constructor(message = 'GlobalStore has been destroyed') {
+    super(message);
+    this.name = 'GlobalStoreDestroyedError';
+  }
 }
 export class GlobalStore {
   private _apiUrl = '';
@@ -38,6 +52,7 @@ export class GlobalStore {
   prefix?: string;
   fieldManager?: string;
 
+  private _isDestroyed = false;
   private store = new Map<string, UnstructuredList>();
   private requestsCache: Array<{
     resource: string;
@@ -48,11 +63,14 @@ export class GlobalStore {
   private stopWatchHandlers = new Map<string, StopWatchHandler>();
   private cancelControllers = new Map<string, AbortController>();
   private _kubeApiTimeout?: false | number;
+  private kubeApiFactory: KubeApiFactory;
 
   constructor(
     params: GlobalStoreInitParams,
     public plugins: IProviderPlugin[]
   ) {
+    this.kubeApiFactory =
+      params.kubeApiFactory || (apiParams => new KubeApi(apiParams));
     this.init(params);
   }
 
@@ -65,6 +83,10 @@ export class GlobalStore {
   }
 
   get<T = UnstructuredList>(resource: string, meta?: MetaQuery): Promise<T> {
+    if (this._isDestroyed) {
+      return Promise.reject(new GlobalStoreDestroyedError());
+    }
+
     if (this.store.has(resource)) {
       // return cached data
       return new Promise(resolve => {
@@ -86,7 +108,7 @@ export class GlobalStore {
     }
 
     const promise = new Promise<T>((resolve, reject) => {
-      const kubeApi = new KubeApi({
+      const kubeApi = this.kubeApiFactory({
         basePath: this._apiUrl,
         watchWsBasePath: this.watchWsApiUrl,
         objectConstructor: getObjectConstructor(resource, meta),
@@ -99,6 +121,10 @@ export class GlobalStore {
       kubeApi
         .listWatch({
           onResponse: async (res, event) => {
+            if (this._isDestroyed) {
+              return;
+            }
+
             const processedRes = await this.processList(res);
             if (!resolved) {
               resolve(processedRes as unknown as T);
@@ -114,6 +140,10 @@ export class GlobalStore {
           signal,
         })
         .then(stop => {
+          if (this._isDestroyed) {
+            stop?.();
+            return;
+          }
           this.stopWatchHandlers.set(resource, stop);
         })
         .catch(e => reject(e))
@@ -138,6 +168,10 @@ export class GlobalStore {
   }
 
   subscribe(resource: string, onEvent: (data: WatchEvent) => void) {
+    if (this._isDestroyed) {
+      throw new GlobalStoreDestroyedError();
+    }
+
     if (!this.subscribers.has(resource)) {
       this.subscribers.set(resource, []);
     }
@@ -154,6 +188,10 @@ export class GlobalStore {
   }
 
   private notify(resource: string, data: WatchEvent) {
+    if (this._isDestroyed) {
+      return;
+    }
+
     const subscribers = this.subscribers.get(resource);
     if (subscribers) {
       for (const subscriber of subscribers) {
@@ -163,6 +201,10 @@ export class GlobalStore {
   }
 
   publish(resource: string, data: WatchEvent) {
+    if (this._isDestroyed) {
+      return;
+    }
+
     this.notify(resource, data);
   }
 
@@ -175,7 +217,14 @@ export class GlobalStore {
       fieldManager,
       kubeApiTimeout,
       plugins,
+      kubeApiFactory,
     } = params;
+
+    if (kubeApiFactory) {
+      this.kubeApiFactory = kubeApiFactory;
+    }
+
+    this._isDestroyed = false;
     this.store = new Map();
     this.subscribers = new Map();
     this.stopWatchHandlers = new Map();
@@ -195,6 +244,10 @@ export class GlobalStore {
     }
   }
   private async processList(list: UnstructuredList) {
+    if (this._isDestroyed) {
+      return list;
+    }
+
     let nextList = list;
     nextList.items.forEach(item => {
       item.id = genResourceId(item);
@@ -206,6 +259,10 @@ export class GlobalStore {
   }
 
   private async processItem(item: Unstructured) {
+    if (this._isDestroyed) {
+      return item;
+    }
+
     let nextItem = item;
     nextItem.id = genResourceId(item);
     for (const plugin of this.plugins) {
@@ -233,6 +290,7 @@ export class GlobalStore {
   }
 
   destroy() {
+    this._isDestroyed = true;
     this.store.clear();
     this.subscribers.clear();
     for (const stopWatch of this.stopWatchHandlers.values()) {
