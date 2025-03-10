@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import { get } from 'lodash-es';
 import { Unstructured } from '../kube-api';
 
 interface ExtractedMetadata {
@@ -28,7 +28,7 @@ export const extractPath = (extractPathName: string, items: Unstructured[]): Uns
   // Parse the parent index from extractPathName
   const parentIndex = extractPathName.match(/^\[(\d+)\]/)?.[1];
   const parentItem = parentIndex !== undefined ? items[parseInt(parentIndex, 10)] : items[0];
-  const extractedData = _.get(items, extractPathName);
+  const extractedData = get(items, extractPathName);
   
   if (!extractedData) {
     return [];

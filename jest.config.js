@@ -19,7 +19,6 @@ module.exports = {
   ],
   testPathIgnorePatterns: ['/node_modules/', '/lib/', '<rootDir>/lib/'],
 
-  testEnvironment: 'node',
   maxWorkers: '50%',
   collectCoverage: Boolean(process.env.COVERAGE),
   collectCoverageFrom: ['<rootDir>/src/**/*.ts'],
@@ -30,5 +29,9 @@ module.exports = {
   snapshotFormat: {
     escapeString: true,
     printBasicPrototype: true,
+  },
+  testEnvironment: 'node',
+  moduleNameMapper: {
+    '^lodash-es$': 'lodash',
   },
 };

@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "es6",
+    "module": "ESNext",
     "outDir": "lib/typings",
     "lib": ["dom", "esnext", "dom.iterable"],
     "rootDir": "src",
@@ -11,7 +12,8 @@
     "sourceMap": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution":"node"
+    "moduleResolution": "node",
+    "allowJs": true
   },
   "include": ["src"],
   "exclude": ["__tests__", "lib"]

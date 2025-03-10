@@ -3,13 +3,16 @@ import { extractPath } from '../../src/utils/extract-path';
 import { Unstructured } from '../../src/kube-api';
 
 describe('extractPath', () => {
-  const mockItems: Unstructured[] = [
+  const mockItems = [
     {
+      id: '1',
       metadata: {
         name: 'parent',
         namespace: 'default'
       },
       spec: {
+        name: 'test',
+        namespace: 'default',
         containers: [
           {
             name: 'container1',
@@ -23,6 +26,7 @@ describe('extractPath', () => {
       }
     },
     {
+      id: '2',
       metadata: {
         name: 'parent2',
         namespace: 'test'
@@ -96,7 +100,7 @@ describe('extractPath', () => {
   });
 
   test('should handle items without metadata', () => {
-    const itemsWithoutMetadata: Unstructured[] = [
+    const itemsWithoutMetadata = [
       {
         spec: {
           containers: [
@@ -109,7 +113,7 @@ describe('extractPath', () => {
       }
     ];
 
-    const result = extractPath('[0].spec.containers', itemsWithoutMetadata);
+    const result = extractPath('[0].spec.containers', itemsWithoutMetadata as unknown as Unstructured[]);
     
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({

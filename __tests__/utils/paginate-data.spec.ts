@@ -4,39 +4,46 @@ import { Pagination } from '@refinedev/core';
 describe('paginateData function', () => {
   const unstructuredData = [
     {
+      id: '1',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod A' },
     },
     {
+      id: '2',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod B' },
     },
     {
+      id: '3',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod C' },
     },
     {
+      id: '4',
       apiVersion: 'v1',
       kind: 'Pod',
-      metadata: { name: 'Pod C' },
+      metadata: { name: 'Pod D' },
     },
     {
+      id: '5',
       apiVersion: 'v1',
       kind: 'Pod',
-      metadata: { name: 'Pod C' },
+      metadata: { name: 'Pod E' },
     },
     {
+      id: '6',
       apiVersion: 'v1',
       kind: 'Pod',
-      metadata: { name: 'Pod C' },
+      metadata: { name: 'Pod F' },
     },
     {
+      id: '7',
       apiVersion: 'v1',
       kind: 'Pod',
-      metadata: { name: 'Pod C' },
+      metadata: { name: 'Pod G' },
     },
   ];
 
@@ -54,7 +61,7 @@ describe('paginateData function', () => {
   it('should no paginate data with custom settings', () => {
     const pagination = { current: 2, pageSize: 2, mode: 'off' };
     console.warn = jest.fn(); // mock error
-    const paginatedData = paginateData(pagination, unstructuredData);
+    const paginatedData = paginateData(pagination as Pagination, unstructuredData);
     const expectedPaginatedData = unstructuredData
     expect(paginatedData).toEqual(expectedPaginatedData);
     expect(console.warn).toHaveBeenCalledWith(

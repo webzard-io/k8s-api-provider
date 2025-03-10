@@ -1,5 +1,5 @@
 import { CrudSorting } from '@refinedev/core';
-import _ from 'lodash';
+import { get, isNil } from 'lodash-es';
 import { Unstructured } from '../kube-api';
 
 export function sortData(
@@ -11,15 +11,15 @@ export function sortData(
   return [...data].sort((a, b) => {
     for (const sort of sorting) {
       const { field, order } = sort;
-      const aValue = _.get(a, field);
-      const bValue = _.get(b, field);
-      if (_.isNil(aValue) && _.isNil(bValue)) {
+      const aValue = get(a, field);
+      const bValue = get(b, field);
+      if (isNil(aValue) && isNil(bValue)) {
         continue;
       }
-      if (_.isNil(aValue)) {
+      if (isNil(aValue)) {
         return order === 'asc' ? 1 : -1;
       }
-      if (_.isNil(bValue)) {
+      if (isNil(bValue)) {
         return order === 'asc' ? -1 : 1;
       }
       if (aValue < bValue) {

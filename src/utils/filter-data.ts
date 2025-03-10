@@ -1,5 +1,5 @@
 import { CrudFilter, CrudFilters, CrudOperators } from '@refinedev/core';
-import _ from 'lodash';
+import { get, has, isNil, includes } from 'lodash-es';
 import { Unstructured } from '../kube-api';
 
 type Filter = CrudFilter & {
@@ -43,11 +43,11 @@ export function evaluateFilter(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any
 ): boolean {
-  if (!_.has(item, field)) {
+  if (!has(item, field)) {
     return false;
   }
-
-  const fieldValue = _.get(item, field);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fieldValue:any = get(item, field);
 
   switch (operator) {
     case 'eq':
@@ -68,7 +68,7 @@ export function evaluateFilter(
       }
       return value.some(item => {
         if (Array.isArray(fieldValue)) {
-          return _.includes(fieldValue, item);
+          return includes(fieldValue, item);
         }
         return item === fieldValue;
       });
@@ -79,28 +79,28 @@ export function evaluateFilter(
       }
       return value.every(item => {
         if (Array.isArray(fieldValue)) {
-          return !_.includes(fieldValue, item);
+          return !includes(fieldValue, item);
         }
         return item !== fieldValue;
       });
     }
     case 'contains':
-      return _.includes(fieldValue, value);
+      return includes(fieldValue, value);
     case 'ncontains':
-      return !_.includes(fieldValue, value);
+      return !includes(fieldValue, value);
     case 'containss':
-      return _.includes(fieldValue.toLowerCase(), value.toLowerCase());
+      return includes(fieldValue.toLowerCase(), value.toLowerCase());
     case 'ncontainss':
-      return !_.includes(fieldValue.toLowerCase(), value.toLowerCase());
+      return !includes(fieldValue.toLowerCase(), value.toLowerCase());
     case 'between':
       return value[0] <= fieldValue && fieldValue <= value[1];
     case 'nbetween':
       return value[0] > fieldValue || fieldValue > value[1];
     case 'null': {
-      return _.isNil(fieldValue);
+      return isNil(fieldValue);
     }
     case 'nnull': {
-      return !_.isNil(fieldValue);
+      return !isNil(fieldValue);
     }
     case 'startswith':
       return fieldValue.startsWith(value);
@@ -117,6 +117,6 @@ export function evaluateFilter(
     case 'endswiths':
       return fieldValue.toLowerCase().endsWith(value.toLowerCase());
     case 'nendswiths':
-      return !fieldValue.toLowerCase().endsWith(value.toLowerCase());
+      return !(fieldValue).toLowerCase().endsWith((value).toLowerCase());
   }
 }

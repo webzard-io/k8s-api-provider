@@ -4,16 +4,19 @@ import { CrudSorting } from '@refinedev/core';
 describe('sortData function', () => {
   const unstructuredData = [
     {
+      id: '1',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod A' },
     },
     {
+      id: '2',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod B' },
     },
     {
+      id: '3',
       apiVersion: 'v1',
       kind: 'Pod',
       metadata: { name: 'Pod C' },
@@ -46,16 +49,19 @@ describe('sortData function', () => {
     const sortedData = sortData(sorting as CrudSorting, unstructuredData);
     const expectedSortedData = [
       {
+        id: '1',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod A' },
       },
       {
+        id: '2',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod B' },
       },
       {
+        id: '3',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod C' },
@@ -69,16 +75,19 @@ describe('sortData function', () => {
     const sortedData = sortData(sorting as CrudSorting, unstructuredData);
     const expectedSortedData = [
       {
+        id: '3',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod C' },
       },
       {
+        id: '2',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod B' },
       },
       {
+        id: '1',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod A' },
@@ -95,16 +104,19 @@ describe('sortData function', () => {
     const sortedData = sortData(sorting as CrudSorting, unstructuredData);
     const expectedSortedData = [
       {
+        id: '3',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod C' },
       },
       {
+        id: '2',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod B' },
       },
       {
+        id: '1',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod A' },
@@ -117,16 +129,19 @@ describe('sortData function', () => {
     const sortedData = sortData(sorting as CrudSorting, unstructuredData);
     const expectedSortedData = [
       {
+        id: '1',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod A' },
       },
       {
+        id: '2',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod B' },
       },
       {
+        id: '3',
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: { name: 'Pod C' },
