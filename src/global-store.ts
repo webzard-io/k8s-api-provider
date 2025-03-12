@@ -41,12 +41,6 @@ export interface GlobalStoreInitParams {
 export interface CancelQueriesParams {
   queryKeys?: string[];
 }
-export class GlobalStoreDestroyedError extends Error {
-  constructor(message = 'GlobalStore has been destroyed') {
-    super(message);
-    this.name = 'GlobalStoreDestroyedError';
-  }
-}
 export class GlobalStore {
   private _apiUrl = '';
   private watchWsApiUrl?: string;
@@ -82,10 +76,21 @@ export class GlobalStore {
   get kubeApiTimeout() {
     return this._kubeApiTimeout;
   }
-
+  get isDestroyed() {
+    return this._isDestroyed;
+  }
+  // clear cache request
+  removeCacheRequest(targetPromise: Promise<unknown>) {
+    const cacheRequestIndex = this.requestsCache.findIndex(f => {
+      return f.promise === targetPromise;
+    });
+    if (cacheRequestIndex > -1) {
+      this.requestsCache.splice(cacheRequestIndex, 1);
+    }
+  }
   get<T = UnstructuredList>(resource: string, meta?: MetaQuery): Promise<T> {
     if (this._isDestroyed) {
-      return Promise.reject(new GlobalStoreDestroyedError());
+      return Promise.reject('GlobalStore has been destroyed');
     }
 
     if (this.store.has(resource)) {
@@ -123,6 +128,7 @@ export class GlobalStore {
         .listWatch({
           onResponse: async (res, event) => {
             if (this._isDestroyed) {
+              console.error('GlobalStore has been destroyed');
               return;
             }
 
@@ -137,6 +143,8 @@ export class GlobalStore {
               await this.processItem(event.object);
               this.notify(resource, event);
             }
+            // TODO: if the request onResponse is timeout, the cache request will not be removed
+            this.removeCacheRequest(promise);
           },
           signal,
         })
@@ -147,15 +155,9 @@ export class GlobalStore {
           }
           this.stopWatchHandlers.set(resource, stop);
         })
-        .catch(e => reject(e))
-        .finally(() => {
-          // clear cache request
-          const cacheRequestIndex = this.requestsCache.findIndex(f => {
-            return f.promise === promise;
-          });
-          if (cacheRequestIndex > -1) {
-            this.requestsCache.splice(cacheRequestIndex, 1);
-          }
+        .catch(e => {
+          this.removeCacheRequest(promise);
+          reject(e);
         });
     });
 
@@ -169,10 +171,6 @@ export class GlobalStore {
   }
 
   subscribe(resource: string, onEvent: (data: WatchEvent) => void) {
-    if (this._isDestroyed) {
-      throw new GlobalStoreDestroyedError();
-    }
-
     if (!this.subscribers.has(resource)) {
       this.subscribers.set(resource, []);
     }
@@ -189,10 +187,6 @@ export class GlobalStore {
   }
 
   private notify(resource: string, data: WatchEvent) {
-    if (this._isDestroyed) {
-      return;
-    }
-
     const subscribers = this.subscribers.get(resource);
     if (subscribers) {
       for (const subscriber of subscribers) {
@@ -202,10 +196,6 @@ export class GlobalStore {
   }
 
   publish(resource: string, data: WatchEvent) {
-    if (this._isDestroyed) {
-      return;
-    }
-
     this.notify(resource, data);
   }
 
@@ -239,16 +229,11 @@ export class GlobalStore {
   }
   loadPlugins(plugins?: IProviderPlugin[]) {
     if (plugins) {
-      this.destroy();
       this.plugins = plugins;
       this.plugins.forEach(plugin => plugin.init(this));
     }
   }
   private async processList(list: UnstructuredList) {
-    if (this._isDestroyed) {
-      return list;
-    }
-
     let nextList = list;
     nextList.items.forEach(item => {
       item.id = genResourceId(item);
@@ -260,10 +245,6 @@ export class GlobalStore {
   }
 
   private async processItem(item: Unstructured) {
-    if (this._isDestroyed) {
-      return item;
-    }
-
     let nextItem = item;
     nextItem.id = genResourceId(item);
     for (const plugin of this.plugins) {
