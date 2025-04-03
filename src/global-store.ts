@@ -104,11 +104,25 @@ export class GlobalStore {
               resolve(processedRes as unknown as T);
               resolved = true;
             }
-            this.store.set(resource, processedRes);
 
-            if (event) {
-              await this.processItem(event.object);
-              this.notify(resource, event);
+            let shouldUpdateStore = true;
+            if (event?.type === 'MODIFIED') {
+              // 防止因为竞态问题，导致数据已经被删除了，但是又一次被添加回去
+              const existingResource = this.store.get(resource);
+              const isObjectExist = existingResource?.items.some(
+                (item: Unstructured) =>
+                  item.metadata?.name === event.object.metadata?.name &&
+                  item.metadata?.namespace === event.object.metadata?.namespace
+              );
+              shouldUpdateStore = !!isObjectExist;
+            }
+
+            if (shouldUpdateStore) {
+              this.store.set(resource, processedRes);
+              if (event) {
+                await this.processItem(event.object);
+                this.notify(resource, event);
+              }
             }
           },
           signal,
