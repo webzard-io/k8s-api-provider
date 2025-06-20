@@ -33,7 +33,7 @@ export type Unstructured = {
   metadata?: ObjectMeta;
 };
 
-type KubeApiQueryParams = {
+export type KubeApiQueryParams = {
   watch?: boolean | number;
   resourceVersion?: string;
   timeoutSeconds?: number;
@@ -58,7 +58,7 @@ type ResourceDescriptor = {
   namespace?: string;
 };
 
-type KubeApiListOptions = {
+export type KubeApiListOptions = {
   namespace?: string;
   query?: KubeApiQueryParams;
   fetchOptions?: Options;
@@ -84,7 +84,7 @@ type KubeObjectConstructor = {
   resource: string;
 };
 
-type KubeApiOptions = {
+export type KubeApiOptions = {
   basePath: string;
   watchWsBasePath?: string;
   kubeApiTimeout?: number | false;
@@ -235,7 +235,7 @@ export class KubeApi<T extends UnstructuredList> {
   private basePath: string;
   private resourceBasePath: string;
   private namespace?: string;
-  private resource: string;
+  resource: string;
   private maxTimeout = Math.pow(2, 10) * 1000;
   private retryTimes = 0;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -611,7 +611,7 @@ export class KubeApi<T extends UnstructuredList> {
     return stop;
   }
 
-  private getUrl(
+  getUrl(
     { name, namespace }: Partial<ResourceDescriptor> = {},
     query?: Partial<KubeApiQueryParams>,
     watch?: boolean
