@@ -126,6 +126,7 @@ export class GlobalStore {
       let resolved = false;
       kubeApi
         .listWatch({
+          namespace: meta?.namespace,
           onResponse: async (res, event) => {
             if (this._isDestroyed) {
               console.error('GlobalStore has been destroyed');
