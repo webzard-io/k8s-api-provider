@@ -740,7 +740,10 @@ export class KubeSdk {
       spec.metadata = spec.metadata || {};
       spec.metadata.annotations = spec.metadata.annotations || {};
 
-      if (strategy === 'application/apply-patch+yaml') {
+      if (
+        strategy === 'application/apply-patch+yaml' &&
+        updateType === 'patch'
+      ) {
         delete spec.metadata?.managedFields;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         delete (spec as any).metadata.resourceVersion;
