@@ -9,6 +9,10 @@ import {
 import { IProviderPlugin } from './plugin';
 import { genResourceId } from './utils/gen-resource-id';
 
+export enum RequestMode {
+  NetworkOnly = 'network-only',
+}
+
 export function getObjectConstructor(resource: string, meta?: MetaQuery) {
   return meta?.resourceBasePath
     ? {
@@ -88,12 +92,13 @@ export class GlobalStore {
       this.requestsCache.splice(cacheRequestIndex, 1);
     }
   }
+
   get<T = UnstructuredList>(resource: string, meta?: MetaQuery): Promise<T> {
     if (this._isDestroyed) {
       return Promise.reject('GlobalStore has been destroyed');
     }
 
-    if (this.store.has(resource)) {
+    if (this.store.has(resource) && meta?.mode !== RequestMode.NetworkOnly) {
       // return cached data
       return new Promise(resolve => {
         resolve(this.store.get(resource)! as unknown as T);
