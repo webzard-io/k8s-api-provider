@@ -418,7 +418,13 @@ export class KubeApi<T extends UnstructuredList> {
     };
 
     // client-side watch simulated by applyYaml
-    stops.push(this.watchBySdk(response, handleEvent));
+    const stopSdkWatch = this.watchBySdk(response, handleEvent);
+    stops.push(stopSdkWatch);
+
+    const retryWithCleanup = async () => {
+      stopSdkWatch();
+      return retry();
+    };
 
     // server-side watch
     const resource = await this.apiVersionResourceCache.resourceByName(
@@ -432,10 +438,18 @@ export class KubeApi<T extends UnstructuredList> {
     if (supportServerWatch) {
       if (this.watchWsBasePath) {
         stops.push(
-          this.watchByWebsocket(url, response, handleEvent, retry, signal)
+          this.watchByWebsocket(
+            url,
+            response,
+            handleEvent,
+            retryWithCleanup,
+            signal
+          )
         );
       } else {
-        stops.push(this.watchByHttp(url, response, handleEvent, retry));
+        stops.push(
+          this.watchByHttp(url, response, handleEvent, retryWithCleanup)
+        );
       }
     }
     return () => {
