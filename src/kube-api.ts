@@ -809,6 +809,10 @@ export class KubeSdk {
     return deleted;
   }
 
+  public async getOne(spec: Unstructured): Promise<Unstructured> {
+    return this.read(cloneDeep(spec)) as Promise<Unstructured>;
+  }
+
   private async read(spec: K8sObject) {
     const url = await this.specUriPath(spec, 'read');
     const res = await ky

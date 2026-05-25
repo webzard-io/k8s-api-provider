@@ -6,6 +6,7 @@ import {
   GetManyResponse,
   BaseKey,
   CreateResponse,
+  HttpError,
   MetaQuery,
   UpdateResponse,
   DeleteOneResponse,
@@ -17,9 +18,23 @@ import { paginateData } from '../utils/paginate-data';
 import {extractPath} from '../utils/extract-path';
 import { GlobalStore } from '../global-store';
 import { transformHttpError } from '../utils/transform-http-error';
+import {
+  isResourceVersionConflict,
+  ResourceVersionConflictRetryOptions,
+  retryResourceVersionConflict,
+} from './resource-version-conflict-retry';
 
 function getApiVersion(resourceBasePath: string): string {
   return resourceBasePath.replace(/^(\/api\/)|(\/apis\/)/, '');
+}
+
+function isHttpError(error: unknown): error is HttpError {
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    'statusCode' in error
+  );
 }
 
 export const dataProvider = (
@@ -161,18 +176,18 @@ export const dataProvider = (
     }: Parameters<DataProvider['update']>['0']): Promise<
       UpdateResponse<TData>
     > => {
-      try {
-        const sdk = new KubeSdk(
-          {
-            basePath: globalStore.apiUrl,
-            fieldManager: globalStore.fieldManager,
-            kubeApiTimeout: globalStore.kubeApiTimeout,
-          },
-          globalStore.plugins
-        );
+      const sdk = new KubeSdk(
+        {
+          basePath: globalStore.apiUrl,
+          fieldManager: globalStore.fieldManager,
+          kubeApiTimeout: globalStore.kubeApiTimeout,
+        },
+        globalStore.plugins
+      );
+      const apply = async (targetVariables: Unstructured) => {
         const params = [
           {
-            ...(variables as unknown as Unstructured),
+            ...targetVariables,
             apiVersion: getApiVersion(meta?.resourceBasePath),
             kind: meta?.kind,
           },
@@ -184,11 +199,54 @@ export const dataProvider = (
           meta?.updateType
         );
 
+        return data[0] as unknown as TData;
+      };
+
+      try {
+        const data = await apply(variables as unknown as Unstructured);
+
         return {
-          data: data[0] as unknown as TData,
+          data,
         };
       } catch (e) {
         const httpError = transformHttpError(e);
+        const retryOptions = meta?.resourceVersionConflictRetry as
+          | ResourceVersionConflictRetryOptions
+          | undefined;
+
+        if (
+          meta?.updateType === 'put' &&
+          retryOptions?.initialResource &&
+          isResourceVersionConflict(httpError)
+        ) {
+          // 409 恢复是 PUT 更新的补偿逻辑；patch/create/delete 仍保持原来的失败语义。
+          try {
+            const data = await retryResourceVersionConflict<TData>({
+              error: httpError,
+              resource: variables as unknown as Unstructured,
+              initialResource: retryOptions.initialResource,
+              conflictMessage: retryOptions.conflictMessage,
+              getLatestResource: async () => {
+                // 一次性 GET 最新资源，不走 GlobalStore 的 listWatch/cache，避免创建额外 watch 连接。
+                return sdk.getOne({
+                  ...(variables as unknown as Unstructured),
+                  apiVersion: getApiVersion(meta?.resourceBasePath),
+                  kind: meta?.kind,
+                });
+              },
+              apply,
+            });
+
+            return {
+              data,
+            };
+          } catch (retryError) {
+            throw isHttpError(retryError)
+              ? retryError
+              : transformHttpError(retryError);
+          }
+        }
+
         throw httpError;
       }
     },
