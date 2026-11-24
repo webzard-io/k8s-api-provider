@@ -50,17 +50,21 @@ async function makeStoreWithWatch(initialItems: Unstructured[]) {
             return () => undefined;
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        }) as any,
+        } as any),
     },
     []
   );
 
   await store.get('persistentvolumeclaims', { resourceBasePath: '/api/v1' });
 
-  return { store, pushEvent: (res: UnstructuredList, event?: WatchEvent) => onResponse!(res, event) };
+  return {
+    store,
+    pushEvent: (res: UnstructuredList, event?: WatchEvent) =>
+      onResponse!(res, event),
+  };
 }
 
-async function getCachedNames(store: GlobalStore) {
+async function getCachedItems(store: GlobalStore) {
   const cached = await store.get<UnstructuredList>('persistentvolumeclaims', {
     resourceBasePath: '/api/v1',
   });
@@ -79,7 +83,7 @@ describe('GlobalStore watch event merge', () => {
       object: makePvc('pvc-a', 'Bound'),
     });
 
-    let items = await getCachedNames(store);
+    let items = await getCachedItems(store);
     expect(items[0].status.phase).toBe('Bound');
 
     // 陈旧闭包场景：事件携带的整表快照里 pvc-a 还是 Pending，
@@ -92,14 +96,14 @@ describe('GlobalStore watch event merge', () => {
       }
     );
 
-    items = await getCachedNames(store);
+    items = await getCachedItems(store);
     expect(items.map(item => item.metadata?.name)).toEqual(['pvc-a', 'pvc-b']);
-    expect(items.find(item => item.metadata?.name === 'pvc-a')?.status.phase).toBe(
-      'Bound'
-    );
-    expect(items.find(item => item.metadata?.name === 'pvc-b')?.status.phase).toBe(
-      'Pending'
-    );
+    expect(
+      items.find(item => item.metadata?.name === 'pvc-a')?.status.phase
+    ).toBe('Bound');
+    expect(
+      items.find(item => item.metadata?.name === 'pvc-b')?.status.phase
+    ).toBe('Pending');
   });
 
   it('applies MODIFIED events from watch to the cached item', async () => {
@@ -112,7 +116,7 @@ describe('GlobalStore watch event merge', () => {
       object: makePvc('pvc-a', 'Bound'),
     });
 
-    const items = await getCachedNames(store);
+    const items = await getCachedItems(store);
     expect(items).toHaveLength(1);
     expect(items[0].status.phase).toBe('Bound');
     expect(items[0].id).toBe('default/pvc-a');
@@ -129,7 +133,7 @@ describe('GlobalStore watch event merge', () => {
       object: makePvc('pvc-b', 'Pending'),
     });
 
-    const items = await getCachedNames(store);
+    const items = await getCachedItems(store);
     expect(items.map(item => item.metadata?.name)).toEqual(['pvc-a']);
   });
 
@@ -147,7 +151,7 @@ describe('GlobalStore watch event merge', () => {
       }
     );
 
-    const items = await getCachedNames(store);
+    const items = await getCachedItems(store);
     expect(items.map(item => item.metadata?.name)).toEqual(['pvc-a']);
   });
 
@@ -159,7 +163,7 @@ describe('GlobalStore watch event merge', () => {
     // 无 event 的响应是真实的全量 relist（首次 list 或断线重连），应整表替换
     await pushEvent(makeList([makePvc('pvc-b', 'Bound')]));
 
-    const items = await getCachedNames(store);
+    const items = await getCachedItems(store);
     expect(items.map(item => item.metadata?.name)).toEqual(['pvc-b']);
   });
 
@@ -180,6 +184,43 @@ describe('GlobalStore watch event merge', () => {
     expect(onEvent.mock.calls[0][0].object.id).toBe('default/pvc-a');
   });
 
+  // KubeApi.watch() 调用 onResponse 不 await，一次 sdk emit 携带多个对象时会并发触发多次合并
+  it('keeps every item when several ADDED events are merged concurrently', async () => {
+    const { store, pushEvent } = await makeStoreWithWatch([
+      makePvc('pvc-a', 'Bound'),
+    ]);
+    const a = makePvc('pvc-a', 'Bound');
+    const b = makePvc('pvc-b', 'Pending');
+    const c = makePvc('pvc-c', 'Pending');
+
+    await Promise.all([
+      pushEvent(makeList([a, b]), { type: 'ADDED', object: b }),
+      pushEvent(makeList([a, b, c]), { type: 'ADDED', object: c }),
+    ]);
+
+    const items = await getCachedItems(store);
+    expect(items.map(item => item.metadata?.name)).toEqual([
+      'pvc-a',
+      'pvc-b',
+      'pvc-c',
+    ]);
+  });
+
+  it('removes every item when several DELETED events are merged concurrently', async () => {
+    const a = makePvc('pvc-a', 'Bound');
+    const b = makePvc('pvc-b', 'Bound');
+    const c = makePvc('pvc-c', 'Bound');
+    const { store, pushEvent } = await makeStoreWithWatch([a, b, c]);
+
+    await Promise.all([
+      pushEvent(makeList([a, c]), { type: 'DELETED', object: b }),
+      pushEvent(makeList([a]), { type: 'DELETED', object: c }),
+    ]);
+
+    const items = await getCachedItems(store);
+    expect(items.map(item => item.metadata?.name)).toEqual(['pvc-a']);
+  });
+
   it('resolves a network-only request even if a watch event arrives before its relist response', async () => {
     let callCount = 0;
     const store = new GlobalStore(
@@ -191,7 +232,9 @@ describe('GlobalStore watch event merge', () => {
             listWatch: async (params: { onResponse: OnResponse }) => {
               callCount += 1;
               if (callCount === 1) {
-                await params.onResponse(makeList([makePvc('pvc-a', 'Pending')]));
+                await params.onResponse(
+                  makeList([makePvc('pvc-a', 'Pending')])
+                );
                 return () => undefined;
               }
               // KubeApi.listWatch 在 watch() 建立期间就可能收到事件，之后才回调首次 list 响应
@@ -203,7 +246,7 @@ describe('GlobalStore watch event merge', () => {
               return () => undefined;
             },
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          }) as any,
+          } as any),
       },
       []
     );

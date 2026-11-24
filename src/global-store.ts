@@ -146,7 +146,7 @@ export class GlobalStore {
               event.type !== 'PING' &&
               (await this.mergeEventIntoStore(resource, event))
             ) {
-              this.removeCacheRequest(promise);
+              // 请求缓存留给下方首次整表响应移除，避免在 resolve 前被移除导致重复建立 listWatch
               return;
             }
 
@@ -196,13 +196,18 @@ export class GlobalStore {
     resource: string,
     event: WatchEvent
   ): Promise<boolean> {
-    const cached = this.store.get(resource);
     // 该资源还没有被 list 过，没有可以合并的缓存
-    if (!cached) {
+    if (!this.store.has(resource)) {
       return false;
     }
 
     const object = await this.processItem({ ...event.object });
+    // 必须在 await 之后读缓存：多个事件会并发合并，提前读会拿到旧缓存并覆盖其他事件的结果
+    const cached = this.store.get(resource);
+    // 处理期间 store 被销毁
+    if (!cached) {
+      return true;
+    }
     const index = cached.items.findIndex(
       item =>
         item.metadata?.name === object.metadata?.name &&
