@@ -9,7 +9,7 @@ jest.mock('ky', () => ({
   },
 }));
 
-import { GlobalStore } from '../../src/global-store';
+import { GlobalStore, RequestMode } from '../../src/global-store';
 import { Unstructured, UnstructuredList, WatchEvent } from '../../src/kube-api';
 
 type OnResponse = (res: UnstructuredList, event?: WatchEvent) => Promise<void>;
@@ -178,5 +178,42 @@ describe('GlobalStore watch event merge', () => {
     expect(onEvent).toHaveBeenCalledTimes(1);
     expect(onEvent.mock.calls[0][0].type).toBe('MODIFIED');
     expect(onEvent.mock.calls[0][0].object.id).toBe('default/pvc-a');
+  });
+
+  it('resolves a network-only request even if a watch event arrives before its relist response', async () => {
+    let callCount = 0;
+    const store = new GlobalStore(
+      {
+        apiUrl: '/api',
+        plugins: [],
+        kubeApiFactory: () =>
+          ({
+            listWatch: async (params: { onResponse: OnResponse }) => {
+              callCount += 1;
+              if (callCount === 1) {
+                await params.onResponse(makeList([makePvc('pvc-a', 'Pending')]));
+                return () => undefined;
+              }
+              // KubeApi.listWatch 在 watch() 建立期间就可能收到事件，之后才回调首次 list 响应
+              await params.onResponse(makeList([makePvc('pvc-a', 'Bound')]), {
+                type: 'MODIFIED',
+                object: makePvc('pvc-a', 'Bound'),
+              });
+              await params.onResponse(makeList([makePvc('pvc-a', 'Bound')]));
+              return () => undefined;
+            },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          }) as any,
+      },
+      []
+    );
+    await store.get('persistentvolumeclaims', { resourceBasePath: '/api/v1' });
+
+    const result = await store.get<UnstructuredList>('persistentvolumeclaims', {
+      resourceBasePath: '/api/v1',
+      mode: RequestMode.NetworkOnly,
+    });
+
+    expect(result.items[0].status.phase).toBe('Bound');
   });
 });
