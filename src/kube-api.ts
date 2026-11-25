@@ -427,11 +427,18 @@ export class KubeApi<T extends UnstructuredList> {
     };
 
     // server-side watch
-    const resource = await this.apiVersionResourceCache.resourceByName(
-      this.resourceBasePath,
-      this.resource,
-      signal
-    );
+    let resource: APIResource;
+    try {
+      resource = await this.apiVersionResourceCache.resourceByName(
+        this.resourceBasePath,
+        this.resource,
+        signal
+      );
+    } catch (error) {
+      // 抛错后调用方拿不到 stop 函数，必须在这里停掉 sdk 监听，否则它会变成孤儿继续写 store
+      stopSdkWatch();
+      throw error;
+    }
     const verbs = resource?.verbs || [];
     const supportServerWatch = verbs.includes('watch');
 

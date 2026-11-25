@@ -138,30 +138,28 @@ export class GlobalStore {
               return;
             }
 
+            // 单个 watch 事件只把该事件增量合并进 store，不能用事件携带的整表快照覆盖：
+            // 快照来自 watch 闭包，在断线重连/退避窗口内可能滞后于 store，
+            // 整表覆盖会让 store 回退到旧数据（SKS-4812：PVC 状态从 Bound 回退成 Pending）
+            if (
+              event &&
+              event.type !== 'PING' &&
+              (await this.mergeEventIntoStore(resource, event))
+            ) {
+              // 请求缓存留给下方首次整表响应移除，避免在 resolve 前被移除导致重复建立 listWatch
+              return;
+            }
+
             const processedRes = await this.processList(res);
             if (!resolved) {
               resolve(processedRes as unknown as T);
               resolved = true;
             }
 
-            let shouldUpdateStore = true;
-            if (event?.type === 'MODIFIED') {
-              // 防止因为竞态问题，导致数据已经被删除了，但是又一次被添加回去
-              const existingResource = this.store.get(resource);
-              const isObjectExist = existingResource?.items.some(
-                (item: Unstructured) =>
-                  item.metadata?.name === event.object.metadata?.name &&
-                  item.metadata?.namespace === event.object.metadata?.namespace
-              );
-              shouldUpdateStore = !!isObjectExist;
-            }
-
-            if (shouldUpdateStore) {
-              this.store.set(resource, processedRes);
-              if (event) {
-                await this.processItem(event.object);
-                this.notify(resource, event);
-              }
+            this.store.set(resource, processedRes);
+            if (event) {
+              const object = await this.processItem(event.object);
+              this.notify(resource, { ...event, object });
             }
             // TODO: if the request onResponse is timeout, the cache request will not be removed
             this.removeCacheRequest(promise);
@@ -188,6 +186,53 @@ export class GlobalStore {
       promise,
     });
     return promise;
+  }
+
+  /**
+   * 把单个 watch 事件增量合并进 store 缓存。
+   * 返回是否已有缓存可合并；没有缓存时由调用方决定如何初始化。
+   */
+  private async mergeEventIntoStore(
+    resource: string,
+    event: WatchEvent
+  ): Promise<boolean> {
+    // 该资源还没有被 list 过，没有可以合并的缓存
+    if (!this.store.has(resource)) {
+      return false;
+    }
+
+    const object = await this.processItem({ ...event.object });
+    // 必须在 await 之后读缓存：多个事件会并发合并，提前读会拿到旧缓存并覆盖其他事件的结果
+    const cached = this.store.get(resource);
+    // 处理期间 store 被销毁
+    if (!cached) {
+      return true;
+    }
+    const index = cached.items.findIndex(
+      item =>
+        item.metadata?.name === object.metadata?.name &&
+        item.metadata?.namespace === object.metadata?.namespace
+    );
+
+    let items: Unstructured[];
+    if (event.type === 'DELETED') {
+      if (index === -1) {
+        return true;
+      }
+      items = cached.items.filter((_, i) => i !== index);
+    } else if (index === -1) {
+      // MODIFIED 却不在缓存里，说明对象已被移出当前列表，不能再加回去
+      if (event.type === 'MODIFIED') {
+        return true;
+      }
+      items = [...cached.items, object];
+    } else {
+      items = cached.items.map((item, i) => (i === index ? object : item));
+    }
+
+    this.store.set(resource, { ...cached, items });
+    this.notify(resource, { ...event, object });
+    return true;
   }
 
   subscribe(resource: string, onEvent: (data: WatchEvent) => void) {
